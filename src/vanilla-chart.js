@@ -83,6 +83,7 @@ function VanillaChart(containerId, inputData) {
 	_listen(window, ['resize','load'], _justifySize.bind(this))
 	_listen(this.canvas, ['mousemove', 'toucmove'], this.move.bind(this))
 	_listen(document, ['mousedown', 'touchstart'], this.drag.bind(this))
+	this.init()
 }
 
 (function() {
@@ -151,11 +152,11 @@ function VanillaChart(containerId, inputData) {
 		mm.rlLeft = mm.left / this.vw
 		mm.rlRight = mm.right / this.vw
 
-
 		var scaleView = this.vw / (this.dataLength - 1)
 		var a = _round(mm.left / scaleView) // a, b == 0..dataLength
 		var b = _round(mm.right / scaleView)
-		this._transitionInit('graph', this._transitions.graph.pos, _getDataMax(this.data, a, b) )
+		var trn = this._transitions.graph
+		_transitionInit(trn, trn.pos, _getDataMax(this.data, a, b) )
 	}
 
 	function _dragDone() {
@@ -163,7 +164,7 @@ function VanillaChart(containerId, inputData) {
 		_listen(document, ['mouseup', 'touchend'], _drag.doneBnd, false)
 		_drag.runBnd = null
 		_drag.doneBnd = null
-		this._transitionInit('minimap', _round(this.vh * this.options.minimapHeightRel / 2), 0, function(){_drag.mode = 0} )
+		_transitionInit(this._transitions.minimap, _round(this.vh * this.options.minimapHeightRel / 2), 0, function(){_drag.mode = 0} )
 	}
 
 	function _getColumn(data, name) {
@@ -336,16 +337,31 @@ function VanillaChart(containerId, inputData) {
 		}
 	}
 
-	function _transition(ani) {
-		if (!ani.run) return false
-		// linear duration(ms) based transition 
-		ani.pos = ani.from + (ani.to - ani.from) / ani.duration * (performance.now() - ani.ts) 
-		if ((ani.to > ani.from && ani.pos >= ani.to) || (ani.to < ani.from && ani.pos <= ani.to) || ani.to === ani.from  ) {
-			ani.run = false
-			ani.pos = ani.to
-			if (ani.onComplete) ani.onComplete()
+	function _transitions(trns) {
+		var result = false
+		for (var key in trns) {
+			var trn = trns[key]
+			result = result || trn.run
+			// linear duration(ms) based transition 
+			if (trn.run) {
+				trn.pos = trn.from + (trn.to - trn.from) / trn.duration * (performance.now() - trn.ts) 
+				if ((trn.to > trn.from && trn.pos >= trn.to) || (trn.to < trn.from && trn.pos <= trn.to) || trn.to === trn.from  ) {
+					trn.run = false
+					trn.pos = trn.to
+					if (trn.onComplete) trn.onComplete()
+				}
+			}
 		}
-		return ani.run
+		return result
+	} //_transitions
+
+	function _transitionInit(trn, from, to, onComplete) {
+		trn.from = from
+		trn.to = to
+		trn.pos = trn.from
+		trn.ts = performance.now()
+		trn.onComplete = onComplete
+		trn.run = true
 	}
 
 	function _draw() {
@@ -363,32 +379,17 @@ function VanillaChart(containerId, inputData) {
 		var b = _round(this.minimap.right / scaleView)
 
 						// ctx, data,      y, height, width,    left,              right,              a, b,                              lineWidth, gridX, gridY
-		_drawGraph(ctx, this.data, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          6,    6,      this.select )
+		_drawGraph(ctx, this.data, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          6,    6,      this.select)
 
-		var redraw = this._transitions.minimap.run || this._transitions.graph.run
-		_transition(this._transitions.minimap)
-		_transition(this._transitions.graph)
-		if (redraw)  this.draw() // -- re-call while transitions running
+		if (_transitions(this._transitions)) this.draw() // -- re-call while transitions running
+	
 	}
 	// helpers end
+
 	//--------------------------------------------------------------------------------------
 	// VanillaChart.prototype methods:
 	this.draw = function() {
 		requestAnimationFrame(_draw.bind(this))
-	}
-
-	this._transitionInit = function(trn, from, to, onComplete) {
-		var trns = this._transitions
-		var ani = trns[trn]
-		ani.from = from
-		ani.to = to
-		ani.pos = ani.from
-		ani.ts = performance.now()
-		ani.onComplete = onComplete
-		var drawing = false
-		for (var key in trns) drawing = drawing || trns[key].run
-		if (!drawing) this.draw()
-		ani.run = true
 	}
 
 	this.move = function(e) {
@@ -416,8 +417,15 @@ function VanillaChart(containerId, inputData) {
 			_drag.doneBnd = _dragDone.bind(this)
 			_listen(document, ['mousemove', 'touchmove'], _drag.runBnd)
 			_listen(document, ['mouseup', 'touchend'], _drag.doneBnd)
-			this._transitionInit('minimap', this._transitions.minimap.pos, _round(this.vh * this.options.minimapHeightRel / 2) )
+			var trn = this._transitions.minimap
+			_transitionInit(trn, trn.pos, _round(this.vh * this.options.minimapHeightRel / 2) )
+			if (_transitions(this._transitions)) this.draw()	
 		}
+	}
+
+	this.init = function() {
+		var trn = this._transitions.graph
+		_transitionInit(trn, trn.pos, _getDataMax(this.data, 1, this.dataLength) )
 	}
 
 }).call(VanillaChart.prototype)
