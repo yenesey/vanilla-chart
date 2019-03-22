@@ -9,7 +9,8 @@ var
 	_abs = Math.abs
 
 function _listen(target, events, handler, listen) {
-	for (var i = 0; i < events.length; i++)	(listen === false)
+	for (var i = 0; i < events.length; i++)	
+		(listen === false)
 		? target.removeEventListener(events[i], handler)
 		: target.addEventListener(events[i], handler)
 }
@@ -20,8 +21,8 @@ var defaults = {
 	minimapBkColor: '#f8f8ff',
 	minimapSelectColor: '#c8dde8',
 	minimapLabelsColor: '#555',
-	gridLinesY: 6,
-	gridLinesX: 6
+	bkColor: '#fff',
+	labelColor: '#aaa'
 }
 
 var transition = {
@@ -36,27 +37,25 @@ var transition = {
 
 // ----------------------------------------------
 
-function VanillaChart(containerId, inputData) {
+function VanillaChart(containerId, data) {
 /*
 	colors: {y0: "#3DC23F", y1: "#F34C44"}
 	columns: (3) [Array(113), Array(113), Array(113)]
 	names: {y0: "#0", y1: "#1"}
 	types: {y0: "line", y1: "line", x: "x"}
 */
-	this.data = inputData
+	this.data = null
+	this.visible = {}
 	this.options = defaults
-	this.container = document.getElementById(containerId); if (!this.container) throw new Error('chart container not found!')
+	this.container = document.getElementById(containerId)
+	if (!this.container) throw new Error('chart container not found!')
 	this.canvas = this.container.appendChild(document.createElement('canvas'))
 	this.ctx = this.canvas.getContext('2d')
 	this.font = window.getComputedStyle(this.container, null).font
 	this.vw = 0
 	this.vh = 0
 	this.select = -1
-	try {
-		this.dataLength = this.data.columns[0].length - 1
-	}	catch (e)	{
-		throw new TypeError('incorrect <inputData> format')
-	}
+
 	this.minimap = {
 		left: 0,
 		right: 0,
@@ -67,9 +66,12 @@ function VanillaChart(containerId, inputData) {
 
 	this._transitions = {
 		minimap: Object.create(transition),
-		graph: Object.create(transition)
+		graph: Object.create(transition),
+		pointer: Object.create(transition)
 	}
-	//this._transitions.graph.duration = 500
+	//this._transitions.graph.duration = 2000
+
+	this.setData(data)
 
 	// handling events:
 	var _justifySize = function() {
@@ -83,14 +85,14 @@ function VanillaChart(containerId, inputData) {
 	_listen(window, ['resize','load'], _justifySize.bind(this))
 	_listen(this.canvas, ['mousemove', 'toucmove'], this.move.bind(this))
 	_listen(document, ['mousedown', 'touchstart'], this.drag.bind(this))
-	this.init()
+	
 }
 
 (function() {
 	// helpers:
-	var _select = -1
-	var _labelHeight = 0
-
+	var labels = []
+	var pointerX = 0
+	var pointerY = 0
 	var _drag = {
 		mode: 0,
 		start: 0,
@@ -123,14 +125,30 @@ function VanillaChart(containerId, inputData) {
 		return 0
 	}
 
-	function _getDataMax(data, a, b) {
-		var max = 0
-		Object.keys(data.names).forEach( function(name) {
-			var column = _getColumn(data, name)
-			for (var i = a + 1; i < b + 1; i++) max = _max(max, column[i])
-		})
-		return max
+	function _getColumn(data, name) {
+		for (var i = 0; i < data.columns.length; i++) {
+			if (data.columns[i][0] === name) return data.columns[i]
+		}
+		return null
 	}
+
+	function _transitions(trns) {
+		var result = false
+		for (var key in trns) {
+			var trn = trns[key]
+			result = result || trn.run
+			// linear duration(ms) based transition 
+			if (trn.run) {
+				trn.pos = trn.from + (trn.to - trn.from) / trn.duration * (performance.now() - trn.ts) 
+				if ((trn.to > trn.from && trn.pos >= trn.to) || (trn.to < trn.from && trn.pos <= trn.to) || trn.to === trn.from  ) {
+					trn.run = false
+					trn.pos = trn.to
+					if (trn.onComplete) trn.onComplete()
+				}
+			}
+		}
+		return result
+	} //_transitions
 
 	function _dragRun(e) {
 		this.select = -1
@@ -155,23 +173,16 @@ function VanillaChart(containerId, inputData) {
 		var scaleView = this.vw / (this.dataLength - 1)
 		var a = _round(mm.left / scaleView) // a, b == 0..dataLength
 		var b = _round(mm.right / scaleView)
-		var trn = this._transitions.graph
-		_transitionInit(trn, trn.pos, _getDataMax(this.data, a, b) )
+		this.initTransition('graph', 'current', this.getMaxY(a, b) )
 	}
 
-	function _dragDone() {
+	function _dragDone(e) {
+		 if (e.type !== 'touchmove') e.target.style.cursor='default'
 		_listen(document, ['mousemove', 'touchmove'], _drag.runBnd, false)
 		_listen(document, ['mouseup', 'touchend'], _drag.doneBnd, false)
 		_drag.runBnd = null
 		_drag.doneBnd = null
-		_transitionInit(this._transitions.minimap, _round(this.vh * this.options.minimapHeightRel / 2), 0, function(){_drag.mode = 0} )
-	}
-
-	function _getColumn(data, name) {
-		for (var i = 0; i < data.columns.length; i++) {
-			if (data.columns[i][0] === name) return data.columns[i]
-		}
-		return null
+		this.initTransition('minimap', 'current', 0, function(){_drag.mode = 0} )
 	}
 
 	function _getDateText(unixDate, part) {
@@ -189,7 +200,7 @@ function VanillaChart(containerId, inputData) {
 		return ctx
 	}
 
-	function _drawLabelBox(ctx, x, y, data, i) {
+	function _drawLabelBox(ctx, x, y, data, i, _labelHeight) {
 	// displays info for 1, 2 and more named columns
 		var p = 10
 		var date = _getColumn(data, 'x')[i]
@@ -232,9 +243,12 @@ function VanillaChart(containerId, inputData) {
 	}
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	function _drawGraph(ctx, data, y, height, width, left, right, a, b, maxY, lineWidth, gridX, gridY, select) {
+	function _drawGraph(ctx, data, visible, y, height, width, left, right, a, b, maxY, lineWidth, select, grid) {
 
-		var rlLeft = left / width
+		var symbolSize = ctx.measureText('M').width
+		if (grid)	height = height - symbolSize - 8
+
+ 		var rlLeft = left / width
 		var rlRight = right / width
 		var scaleView = width / (data.columns[0].length - 2)
 		var scaleX = (1 / (rlRight - rlLeft))
@@ -243,44 +257,80 @@ function VanillaChart(containerId, inputData) {
 		var Y0 = y + height
 		ctx.lineWidth = lineWidth
 		ctx.lineJoin = 'round'
-		Object.keys(data.names).forEach( function(name) {
+		for (var name in visible) {
 			ctx.beginPath()
 			ctx.strokeStyle = data.colors[name]
 			var dataY = _getColumn(data, name)
-			
 			// [a..b] - no need offscreen drawing
 			for (var i = a; i <= b; i++) ctx.lineTo(
 				(i * scaleView - left) * scaleX,
 				Y0 - dataY[i + 1] * scaleY
 			)
 			ctx.stroke()
-		})
+		}
 
-		if (gridX === 0) return
+		if (!grid) return
 
 		//-------------------------Y - lines / labels
 		ctx.lineWidth = 0.2
 		ctx.beginPath()
 		ctx.strokeStyle = 'grey'
-		var stepY = maxY / gridY
+		var stepY = maxY / 8
 		ctx.fillStyle = '#aaa'
-		for (var y = 0; y < gridY; y++) {
+		for (var y = 0; y < 8; y++) {
 			ctx.moveTo(0, Y0 - y * stepY * scaleY)
 			ctx.lineTo(width, Y0 - y * stepY * scaleY)
-			ctx.fillText(_round(y * stepY).toString(), 5, Y0 - y * stepY  * scaleY - _labelHeight / 2)
+			ctx.fillText(_round(y * stepY).toString(), 5, Y0 - y * stepY  * scaleY - symbolSize)
 		}
 		ctx.stroke()
 
 		//-------------------------X - labels
-		var stepX = _round(_abs(b - a) / gridX)
+/*
+		var labelSize = symbolSize * 8
+		var labelCount = width / labelSize
+		var stepX = _round(_abs(b - a) / labelCount)
 		var dataX = _getColumn(data, 'x')
+
+		for (var i = a; i < b; i++) {
+			if ( i > a &&  i % stepX === 0) {
+				var label = _getDateText(dataX[i+1], 2)
+				var w = ctx.measureText(label).width
+				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
+			}
+		}
+*/
+		var labelSize = symbolSize * 8
+		var labelCount = width / labelSize
+		var stepX = _round(_max(_abs(b - a), labelCount) / labelCount)
+		var dataX = _getColumn(data, 'x')
+
+		var dense = labelSize / (width / _abs(b - a))
+
+		console.log('***********************')
+
+
 		for (var i = a; i < b; i++) {
 			var label = _getDateText(dataX[i+1], 2)
 			var w = ctx.measureText(label).width
-			if ( i > a &&  i % stepX === 0) {
-				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + _labelHeight)
+
+			if (i % _round(dense) === 0) {
+				console.log(i)
+				ctx.fillStyle = 'rgba(100, 100, 100, 1)'
+				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
+			}	
+
+			if (i % _round(dense/2) === 0) {
+				ctx.fillStyle = 'rgba(100, 100, 100, ' + (1 - (dense - Math.floor(dense)))   +  ')'
+				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
 			}
+			
+	
+
 		}
+
+
+
+
 
 		//-------------------------Selection
 		if (select !== -1) {
@@ -294,7 +344,7 @@ function VanillaChart(containerId, inputData) {
 			ctx.stroke()
 
 			ctx.lineWidth = lineWidth
-			Object.keys(data.names).forEach(function(name) {
+			for (var name in visible) {
 				var dataY = _getColumn(data, name)
 				ctx.beginPath()
 				ctx.strokeStyle = data.colors[name]
@@ -303,8 +353,8 @@ function VanillaChart(containerId, inputData) {
 				ctx.arc(x, y, 4, 0, 2*Math.PI, false)
 				ctx.fill()
 				ctx.stroke()
-			})
-			_drawLabelBox(ctx, x, 0, data, i+1)
+			}
+			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8)
 		}
 
 	}	// _drawGraph
@@ -326,7 +376,7 @@ function VanillaChart(containerId, inputData) {
 
 		ctx.fillRect(r.x + sb, r.y, r.w-sb*2, 2)
 		ctx.fillRect(r.x + sb, r.y+r.h-2, r.w-sb*2, 2)
-		_drawGraph(ctx, self.data, r.y, r.h,	self.vw,  0, self.vw, 0, self.dataLength, _getDataMax(self.data, 1, self.dataLength), 1, 0, 0, -1)
+		_drawGraph(ctx, self.data, self.visible, r.y, r.h,	self.vw,  0, self.vw, 0, self.dataLength, self.getMaxY(1, self.dataLength), 1,  -1, false)
 
 		//animation
 		if (_drag.mode !== 0) {
@@ -337,52 +387,28 @@ function VanillaChart(containerId, inputData) {
 		}
 	}
 
-	function _transitions(trns) {
-		var result = false
-		for (var key in trns) {
-			var trn = trns[key]
-			result = result || trn.run
-			// linear duration(ms) based transition 
-			if (trn.run) {
-				trn.pos = trn.from + (trn.to - trn.from) / trn.duration * (performance.now() - trn.ts) 
-				if ((trn.to > trn.from && trn.pos >= trn.to) || (trn.to < trn.from && trn.pos <= trn.to) || trn.to === trn.from  ) {
-					trn.run = false
-					trn.pos = trn.to
-					if (trn.onComplete) trn.onComplete()
-				}
-			}
-		}
-		return result
-	} //_transitions
-
-	function _transitionInit(trn, from, to, onComplete) {
-		trn.from = from
-		trn.to = to
-		trn.pos = trn.from
-		trn.ts = performance.now()
-		trn.onComplete = onComplete
-		trn.run = true
-	}
-
 	function _draw() {
 		var ctx = this.ctx
-		ctx.clearRect(0, 0, this.vw, this.vh)
+		ctx.fillStyle = this.options.bkColor
+		ctx.fillRect(0, 0, this.vw, this.vh)
+
 		_drawMinimap(this)
 
-		ctx.font = this.font
-		_labelHeight = this.ctx.measureText('M').width + 8
-
-		var h = _round(this.vh - this.vh * this.options.minimapHeightRel - _labelHeight*2) //TODO labeHeight to graph
-
-		var scaleView = this.vw / (112 - 1)
+		var h = _round(this.vh - this.vh * this.options.minimapHeightRel)
+		var scaleView = this.vw / (this.dataLength - 1)
 		var a = _round(this.minimap.left / scaleView) // a, b == 0..dataLength
 		var b = _round(this.minimap.right / scaleView)
+		ctx.font = this.font
+						// ctx, data,      								   y, height, width,    left,              right,              a, b,                              lineWidth,  grid
+		_drawGraph(ctx, this.data, this.visible, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          this.select, true)
 
-						// ctx, data,      y, height, width,    left,              right,              a, b,                              lineWidth, gridX, gridY
-		_drawGraph(ctx, this.data, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          6,    6,      this.select)
 
+		ctx.beginPath()
+		ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
+		ctx.arc(pointerX, pointerY, this._transitions.pointer.pos,   0, 2*Math.PI, false)
+		ctx.fill()
+		
 		if (_transitions(this._transitions)) this.draw() // -- re-call while transitions running
-	
 	}
 	// helpers end
 
@@ -406,9 +432,12 @@ function VanillaChart(containerId, inputData) {
 	this.drag	= function(e) {
 		if (_drag.runBnd || _drag.doneBnd) return
 		var r = e.target.getBoundingClientRect()
+		e.target.style.cursor = 'w-resize'
 		if (e.type === 'touchstart') e = e.targetTouches[0]
-		_drag.mode = _getPointingRegion(this, e.pageX - r.left, e.pageY - r.top)
-
+		pointerX = e.pageX - r.left
+		pointerY = e.pageY - r.top
+		this.initTransition('pointer', 'current', 30, function () { this._transitions.pointer.pos = 0}.bind(this)  )
+		_drag.mode = _getPointingRegion(this, pointerX, pointerY)
 		if (_drag.mode > 0) {
 			_drag.start = e.clientX
 			_drag.left = this.minimap.left
@@ -417,16 +446,55 @@ function VanillaChart(containerId, inputData) {
 			_drag.doneBnd = _dragDone.bind(this)
 			_listen(document, ['mousemove', 'touchmove'], _drag.runBnd)
 			_listen(document, ['mouseup', 'touchend'], _drag.doneBnd)
-			var trn = this._transitions.minimap
-			_transitionInit(trn, trn.pos, _round(this.vh * this.options.minimapHeightRel / 2) )
-			if (_transitions(this._transitions)) this.draw()	
+			this.initTransition('minimap', 'current', _round(this.vh * this.options.minimapHeightRel / 2) )
 		}
 	}
 
-	this.init = function() {
-		var trn = this._transitions.graph
-		_transitionInit(trn, trn.pos, _getDataMax(this.data, 1, this.dataLength) )
+	this.setData = function(data) {
+		this.data = data
+		try {
+			this.dataLength = data.columns[0].length - 1
+		}	catch (e)	{
+			throw new TypeError('incorrect <inputData> format')
+		}
+		for (var k in data.names)	this.visible[k] = true
+		this.initTransition('graph', 'current', this.getMaxY() )
 	}
+
+	this.getMaxY = function(a, b) {
+		var max = 0
+		a = a || 0
+		b = b || this.dataLength
+		for (var name in this.visible) {
+			var column = _getColumn(this.data, name)
+			for (var i = a + 1; i < b + 1; i++) max = _max(max, column[i])
+		}
+		return max
+	}
+
+	this.setVisibility = function(col, vis) {
+		if (typeof vis === 'undefined') {
+			if (col in this.visible) delete this.visible[col]; else this.visible[col] = true
+		} else {
+			if (vis) this.visible[col] = true; else delete this.visible[col]
+		}
+		this.initTransition('graph', 'current', this.getMaxY() )
+	}
+
+	this.initTransition = function(key, from, to, onComplete) {
+		var trns = this._transitions
+		var trn = trns[key]
+		trn.from = (from === 'current')?trn.pos: from
+		trn.pos = trn.from
+		trn.to = to
+		trn.ts = performance.now()
+		trn.onComplete = onComplete
+		var running = false
+		for (var k in trns) running = running || trns[k].run
+		if (!running) this.draw()
+		trn.run = true
+	}
+
 
 }).call(VanillaChart.prototype)
 
