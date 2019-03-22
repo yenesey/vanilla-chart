@@ -90,7 +90,6 @@ function VanillaChart(containerId, data) {
 
 (function() {
 	// helpers:
-	var labels = []
 	var pointerX = 0
 	var pointerY = 0
 	var _drag = {
@@ -218,7 +217,7 @@ function VanillaChart(containerId, data) {
 		}
 		width = _max(dateWidth, width) + p
 		x = x - width / 2
-		ctx.fillStyle = '#fff'
+		ctx.fillStyle = 'rgba(255,255,255, 0.9)'
 		ctx.strokeStyle = '#eee'
 		ctx.beginPath()
 		_drawRoundedRect(ctx, x, 1, width, _labelHeight * 3 + p, 6).fill()
@@ -230,13 +229,13 @@ function VanillaChart(containerId, data) {
 
 		var w = 0, _x = x
 		var font = ctx.font
-		console.log(font)
+		var bold = ctx.font.replace(/(\d+)px/, 'bold ' + Number(Number(RegExp.$1)+2)+'px')
 		for (key in obj) {
 			ctx.fillStyle = obj[key].color
 			w = obj[key].width
-			ctx.font = font.replace('12px', 'bold 14px')
+			ctx.font = bold
 			ctx.fillText(obj[key].value , _x + p,	_labelHeight*2 + p/4)
-			ctx.font = font.replace('bold 14px', '12px')
+			ctx.font = font
 			ctx.fillText(obj[key].name ,  _x + p,	_labelHeight*3 + p/4)
 			_x = _x + w + 10
 		}
@@ -313,8 +312,8 @@ function VanillaChart(containerId, data) {
 			ctx.strokeStyle = 'grey'
 			ctx.lineWidth = 0.5
 			var x = i * scaleView * scaleX - left * scaleX
-			ctx.moveTo(x, 0)
-			ctx.lineTo(x, height)
+			ctx.moveTo(x, symbolSize * 1.8)
+			ctx.lineTo(x, height - symbolSize * 1.8)
 			ctx.stroke()
 
 			ctx.lineWidth = lineWidth
