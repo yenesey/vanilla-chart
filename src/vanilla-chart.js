@@ -84,7 +84,7 @@ function VanillaChart(containerId, data) {
 
 	_listen(window, ['resize','load'], _justifySize.bind(this))
 	_listen(this.canvas, ['mousemove', 'toucmove'], this.move.bind(this))
-	_listen(document, ['mousedown', 'touchstart'], this.drag.bind(this))
+	_listen(this.canvas, ['mousedown', 'touchstart'], this.drag.bind(this))
 	
 }
 
@@ -230,6 +230,7 @@ function VanillaChart(containerId, data) {
 
 		var w = 0, _x = x
 		var font = ctx.font
+		console.log(font)
 		for (key in obj) {
 			ctx.fillStyle = obj[key].color
 			w = obj[key].width
@@ -285,52 +286,25 @@ function VanillaChart(containerId, data) {
 		ctx.stroke()
 
 		//-------------------------X - labels
-/*
 		var labelSize = symbolSize * 8
-		var labelCount = width / labelSize
-		var stepX = _round(_abs(b - a) / labelCount)
+		var dense =  _max(_abs(b - a) / width * labelSize, 1)
+
 		var dataX = _getColumn(data, 'x')
-
-		for (var i = a; i < b; i++) {
-			if ( i > a &&  i % stepX === 0) {
-				var label = _getDateText(dataX[i+1], 2)
-				var w = ctx.measureText(label).width
-				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
-			}
-		}
-*/
-		var labelSize = symbolSize * 8
-		var labelCount = width / labelSize
-		var stepX = _round(_max(_abs(b - a), labelCount) / labelCount)
-		var dataX = _getColumn(data, 'x')
-
-		var dense = labelSize / (width / _abs(b - a))
-
-		console.log('***********************')
-
-
 		for (var i = a; i < b; i++) {
 			var label = _getDateText(dataX[i+1], 2)
 			var w = ctx.measureText(label).width
 
 			if (i % _round(dense) === 0) {
-				console.log(i)
 				ctx.fillStyle = 'rgba(100, 100, 100, 1)'
 				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
 			}	
-
-			if (i % _round(dense/2) === 0) {
+/*
+			if (i % (_round(dense) -1) === 0) {
 				ctx.fillStyle = 'rgba(100, 100, 100, ' + (1 - (dense - Math.floor(dense)))   +  ')'
 				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
 			}
-			
-	
-
+*/
 		}
-
-
-
-
 
 		//-------------------------Selection
 		if (select !== -1) {
