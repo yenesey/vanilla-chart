@@ -16,13 +16,16 @@ function _listen(target, events, handler, listen) {
 }
 
 var defaults = {
+	padding: 10,
 	minimapHeightRel: 0.14,
 	minimapBandSize: 12,
-	minimapBkColor: '#f8f8ff',
-	minimapSelectColor: '#c8dde8',
-	minimapLabelsColor: '#555',
-	bkColor: '#fff',
-	labelColor: '#aaa'
+	colors: {
+		background: '#fff',
+		minimap: '#f8f8ff',
+		minimapFrame: '#c8dde8',
+		minimapDrag: 'rgba(200, 190, 190, 0.2)',
+		label: '#aaa'
+	}
 }
 
 var transition = {
@@ -51,17 +54,24 @@ function VanillaChart(containerId, data) {
 	if (!this.container) throw new Error('chart container not found!')
 	this.canvas = this.container.appendChild(document.createElement('canvas'))
 	this.ctx = this.canvas.getContext('2d')
-	this.font = window.getComputedStyle(this.container, null).font
+	this.ctx.font = window.getComputedStyle(this.container, null).font
+	this.font = this.ctx.font
 	this.vw = 0
 	this.vh = 0
 	this.select = -1
+
+	this.controls = {
+		h: 0,
+		vh: 0,
+		widths: [0]
+	}
 
 	this.minimap = {
 		left: 0,
 		right: 0,
 		rlLeft: 0.75,
 		rlRight: 1,
-		sbSize: this.options.minimapBandSize
+		vh: 0
 	}
 
 	this._transitions = {
@@ -69,7 +79,7 @@ function VanillaChart(containerId, data) {
 		graph: Object.create(transition),
 		pointer: Object.create(transition)
 	}
-	//this._transitions.graph.duration = 2000
+	this._transitions.pointer.duration = 300
 
 	this.setData(data)
 
@@ -77,19 +87,21 @@ function VanillaChart(containerId, data) {
 	var _justifySize = function() {
 		this.vw = this.canvas.width  = this.container.clientWidth
 		this.vh = this.canvas.height = this.container.clientHeight
-		this.minimap.left = this.vw * this.minimap.rlLeft
-		this.minimap.right = this.vw * this.minimap.rlRight
+		this.minimap.left = _round(this.vw * this.minimap.rlLeft)
+		this.minimap.right = _round(this.vw * this.minimap.rlRight)
+		this.minimap.vh = _round(this.vh * this.options.minimapHeightRel)
+		this.controls.vh = _round(this.vh * 0.15) * (1 + Math.floor((this.controls.widths[0] + this.controls.h)/this.vw))
 		this.draw()
 	}
 
 	_listen(window, ['resize','load'], _justifySize.bind(this))
 	_listen(this.canvas, ['mousemove', 'toucmove'], this.move.bind(this))
-	_listen(this.canvas, ['mousedown', 'touchstart'], this.drag.bind(this))
+	_listen(this.canvas, ['mousedown', 'touchstart'], this.mousetouch.bind(this))
 	
 }
 
 (function() {
-	// helpers:
+	// helpers (a spike of private data/methods ):
 	var pointerX = 0
 	var pointerY = 0
 	var _drag = {
@@ -102,21 +114,41 @@ function VanillaChart(containerId, data) {
 	}
 	
 	function _getMinimapRect(self) {
-		var h = _round(self.vh * self.options.minimapHeightRel)
-		var margin = _round(h * 0.10)
+		var mm = self.minimap
+		var margin = _round(mm.vh * 0.10)
 		return {
-			y: self.vh - h + margin,
-			x: self.minimap.left,
-			w: self.minimap.right - self.minimap.left,
-			h: h - margin * 2
+			y: self.vh - mm.vh + margin - self.controls.vh,
+			x: mm.left,
+			w: mm.right - mm.left,
+			h: mm.vh - margin * 2
 		}
+	}
+
+	function _iterateControls(self, cb) {
+		var pad = self.options.padding
+		var controls = self.controls
+		var x = pad, i = 1
+		var y = self.vh - controls.vh + pad
+		for (var col in self.data.names) {
+			cb({x: x, y: y, w: controls.widths[i], h: controls.h}, col)
+			x = x + controls.widths[i] + pad
+			if (x > self.vw - (controls.h + pad*2)) {
+				x = pad
+				y = y + controls.h + pad
+			}
+			i++
+		}
+	}
+
+	function _inRect(x, y, r) {
+		return (r.x <= x && x <= r.x + r.w && r.y <= y && y <= r.y + r.h)
 	}
 
 	function _getPointingRegion(self, x, y) {
 		var r = _getMinimapRect(self)
-		var sb = self.minimap.sbSize
+		var sb = self.options.minimapBandSize
 		if (y < r.y) return 7
-		if (r.x <= x && x <= r.x + r.w && r.y <= y && y <= r.y + r.h) {
+		if (_inRect(x, y, r)) {
 			if (x < r.x + sb)	return 1
 			if (x > r.x + r.w - sb)	return 2
 			return 3
@@ -154,17 +186,18 @@ function VanillaChart(containerId, data) {
 		if (e.type === 'touchmove') e = e.targetTouches[0]
 		var delta = e.clientX - _drag.start
 		var mm = this.minimap
+		var sbSize = this.options.minimapBandSize
 
 		if (_drag.mode & 4) delta = -delta //drag by body - reversal
 		if (_drag.mode & 1) {
 			mm.left = _drag.left + delta
 			mm.left = _max(mm.left, 1)
-			mm.left = _min(mm.left, mm.right - mm.sbSize * 2 - 1)
+			mm.left = _min(mm.left, mm.right - sbSize * 2 - 1)
 		}
 		if (_drag.mode & 2) {
 			mm.right = _drag.right + delta 
 			mm.right = _min(mm.right, this.vw - 1)
-			mm.right = _max(mm.right, mm.left + mm.sbSize * 2 + 1)
+			mm.right = _max(mm.right, mm.left + sbSize * 2 + 1)
 		}
 		mm.rlLeft = mm.left / this.vw
 		mm.rlRight = mm.right / this.vw
@@ -184,6 +217,10 @@ function VanillaChart(containerId, data) {
 		this.initTransition('minimap', 'current', 0, function(){_drag.mode = 0} )
 	}
 
+	function _fontShift(font, delta, bold) {
+		return font.replace(/(\d*\.?\d+)px/, function(m, p1) {return (bold?'bold ':'') + Number(Number(p1)+delta)+'px' } )
+	}
+
 	function _getDateText(unixDate, part) {
 		return String.prototype.substr.apply((new Date(unixDate)), [[0, 3], [4, 11],	[4, 6],	[11, 4]][part])
 	}
@@ -199,7 +236,7 @@ function VanillaChart(containerId, data) {
 		return ctx
 	}
 
-	function _drawLabelBox(ctx, x, y, data, i, _labelHeight) {
+	function _drawLabelBox(ctx, x, y, data, i, _labelHeight, labelColor) {
 	// displays info for 1, 2 and more named columns
 		var p = 10
 		var date = _getColumn(data, 'x')[i]
@@ -223,13 +260,13 @@ function VanillaChart(containerId, data) {
 		_drawRoundedRect(ctx, x, 1, width, _labelHeight * 3 + p, 6).fill()
 		ctx.stroke()
 
-		ctx.fillStyle = '#000'
+		ctx.fillStyle = labelColor
 		ctx.beginPath()
 		ctx.fillText(dateLabel, x + width/2 - dateWidth/2, _labelHeight + p/4)
 
 		var w = 0, _x = x
 		var font = ctx.font
-		var bold = ctx.font.replace(/(\d+)px/, 'bold ' + Number(Number(RegExp.$1)+2)+'px')
+		var bold = _fontShift(ctx.font, 2, true)
 		for (key in obj) {
 			ctx.fillStyle = obj[key].color
 			w = obj[key].width
@@ -243,7 +280,7 @@ function VanillaChart(containerId, data) {
 	}
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	function _drawGraph(ctx, data, visible, y, height, width, left, right, a, b, maxY, lineWidth, select, grid) {
+	function _drawGraph(ctx, data, visible, y, height, width, left, right, a, b, maxY, lineWidth, select, grid, labelColor) {
 
 		var symbolSize = ctx.measureText('M').width
 		if (grid)	height = height - symbolSize - 8
@@ -276,7 +313,7 @@ function VanillaChart(containerId, data) {
 		ctx.beginPath()
 		ctx.strokeStyle = 'grey'
 		var stepY = maxY / 8
-		ctx.fillStyle = '#aaa'
+		ctx.fillStyle = labelColor
 		for (var y = 0; y < 8; y++) {
 			ctx.moveTo(0, Y0 - y * stepY * scaleY)
 			ctx.lineTo(width, Y0 - y * stepY * scaleY)
@@ -294,7 +331,7 @@ function VanillaChart(containerId, data) {
 			var w = ctx.measureText(label).width
 
 			if (i % _round(dense) === 0) {
-				ctx.fillStyle = 'rgba(100, 100, 100, 1)'
+				ctx.fillStyle = labelColor
 				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
 			}	
 /*
@@ -327,22 +364,23 @@ function VanillaChart(containerId, data) {
 				ctx.fill()
 				ctx.stroke()
 			}
-			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8)
+			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor)
 		}
 
 	}	// _drawGraph
 
 	function _drawMinimap(self) {
 		var ctx = self.ctx
-		var sb = self.minimap.sbSize
+		var sb = self.options.minimapBandSize
+		var colors = self.options.colors
 		var r = _getMinimapRect(self)
 
 		ctx.beginPath()
-		ctx.fillStyle = self.options.minimapBkColor
+		ctx.fillStyle = colors.minimap
 		ctx.fillRect(0, r.y, r.x + sb, r.h)
 		ctx.fillRect(r.x + r.w - sb, r.y, self.vw - r.x - r.w + sb , r.h)
 
-   	ctx.fillStyle = self.options.minimapSelectColor
+   	ctx.fillStyle = colors.minimapFrame
 		_drawRoundedRect(ctx, r.x,            r.y, sb, r.h, 6, [1,1,0,0])
 		_drawRoundedRect(ctx, r.x + r.w - sb, r.y, sb, r.h, 6, [0,0,1,1])
 		ctx.fill()
@@ -354,31 +392,66 @@ function VanillaChart(containerId, data) {
 		//animation
 		if (_drag.mode !== 0) {
 			ctx.beginPath()
-			ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
+			ctx.fillStyle = colors.minimapDrag
 		 	ctx.arc(r.x + [0, sb/2, r.w-sb/2, r.w/2][_drag.mode], r.y + r.h/2, self._transitions.minimap.pos,   0, 2*Math.PI, false)
 			ctx.fill()
 		}
 	}
 
+	function _drawControls(self) {
+		var ctx = self.ctx
+		ctx.font = _fontShift(self.font, 2)
+		var data = self.data
+		_iterateControls(self, function(r, col){
+			ctx.beginPath()
+			ctx.fillStyle = '#eeef'
+			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2).fill()
+			ctx.textBaseline = 'middle'
+			if (col in self.visible) {
+				ctx.beginPath()
+				ctx.fillStyle = data.colors[col]
+				ctx.arc(r.x + r.h/2, r.y+r.h/2, r.h/3, 0, 2*Math.PI, false)
+				ctx.fill()
+
+				ctx.beginPath()
+				ctx.fillStyle = '#fff'
+				
+				ctx.fillText('\u2713' , r.x + r.h/3, r.y + r.h/2)
+			} else {
+				ctx.beginPath()
+				ctx.strokeStyle = data.colors[col]
+				ctx.arc(r.x + r.h/2, r.y+r.h/2, r.h/3, 0, 2*Math.PI, false)
+				ctx.stroke()
+			}
+			ctx.fillStyle = data.colors[col]
+			ctx.beginPath()	
+			ctx.fillText(data.names[col], r.x + r.h , r.y + r.h/2)
+			ctx.textBaseline = 'bottom'
+		})
+
+	}
+
 	function _draw() {
 		var ctx = this.ctx
-		ctx.fillStyle = this.options.bkColor
+		ctx.fillStyle = this.options.colors.background
 		ctx.fillRect(0, 0, this.vw, this.vh)
-
+	
 		_drawMinimap(this)
+		_drawControls(this)
 
-		var h = _round(this.vh - this.vh * this.options.minimapHeightRel)
+		var h = _round(this.vh - this.minimap.vh - this.controls.vh)
 		var scaleView = this.vw / (this.dataLength - 1)
 		var a = _round(this.minimap.left / scaleView) // a, b == 0..dataLength
 		var b = _round(this.minimap.right / scaleView)
 		ctx.font = this.font
-						// ctx, data,      								   y, height, width,    left,              right,              a, b,                              lineWidth,  grid
-		_drawGraph(ctx, this.data, this.visible, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          this.select, true)
-
+						// ctx, data,      								   y, height, width,    left,              right,              a, b,                          lineWidth,               grid
+		_drawGraph(ctx, this.data, this.visible, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          this.select, true, this.options.colors.label)
 
 		ctx.beginPath()
 		ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
-		ctx.arc(pointerX, pointerY, this._transitions.pointer.pos,   0, 2*Math.PI, false)
+		var r = this._transitions.pointer.pos
+		ctx.arc(pointerX, pointerY, r,   0, 2*Math.PI, false)
+		if (r > 12)	ctx.arc(pointerX, pointerY, r-12,   0, 2*Math.PI, true)
 		ctx.fill()
 		
 		if (_transitions(this._transitions)) this.draw() // -- re-call while transitions running
@@ -394,24 +467,25 @@ function VanillaChart(containerId, data) {
 	this.move = function(e) {
 		var r = e.target.getBoundingClientRect()
 		if (e.type === 'touchstart') e = e.targetTouches[0]
-		var x = e.pageX - r.left, y = e.pageY - r.top
-		
-		if (y < (this.vh - this.vh * this.options.minimapHeightRel)) {
+		var x = e.clientX - r.left, y = e.clientY - r.top
+		if (y < (this.vh - this.minimap.vh - this.controls.vh)) {
 			this.select = x
 			this.draw()
 		}
 	}
 
-	this.drag	= function(e) {
+	this.mousetouch	= function(e) {
 		if (_drag.runBnd || _drag.doneBnd) return
 		var r = e.target.getBoundingClientRect()
-		e.target.style.cursor = 'w-resize'
+		var event = e
 		if (e.type === 'touchstart') e = e.targetTouches[0]
-		pointerX = e.pageX - r.left
-		pointerY = e.pageY - r.top
-		this.initTransition('pointer', 'current', 30, function () { this._transitions.pointer.pos = 0}.bind(this)  )
+		pointerX = e.clientX - r.left
+		pointerY = e.clientY - r.top
+		
 		_drag.mode = _getPointingRegion(this, pointerX, pointerY)
 		if (_drag.mode > 0) {
+			event.preventDefault()
+			e.target.style.cursor = 'w-resize'
 			_drag.start = e.clientX
 			_drag.left = this.minimap.left
 			_drag.right = this.minimap.right
@@ -419,7 +493,17 @@ function VanillaChart(containerId, data) {
 			_drag.doneBnd = _dragDone.bind(this)
 			_listen(document, ['mousemove', 'touchmove'], _drag.runBnd)
 			_listen(document, ['mouseup', 'touchend'], _drag.doneBnd)
-			this.initTransition('minimap', 'current', _round(this.vh * this.options.minimapHeightRel / 2) )
+			this.initTransition('minimap', 'current', _round(this.minimap.vh / 2) )
+		} else {
+			var self = this
+			_iterateControls(this, function(r, col){
+				if (_inRect(pointerX, pointerY, r)) {
+					event.preventDefault()
+					self.setVisibility(col)
+					self.initTransition('pointer', 'current', 50, function () { self._transitions.pointer.pos = 0}.bind(self)  )
+				}
+			})
+
 		}
 	}
 
@@ -430,7 +514,16 @@ function VanillaChart(containerId, data) {
 		}	catch (e)	{
 			throw new TypeError('incorrect <inputData> format')
 		}
-		for (var k in data.names)	this.visible[k] = true
+		var ctx = this.ctx
+		ctx.font = _fontShift(this.font, 2, true)
+		this.controls.h = ctx.measureText('M').width * 3
+		var widths = this.controls.widths = [0]
+		for (var k in data.names)	{
+			var w = ctx.measureText(data.names[k]).width + this.controls.h + this.options.padding
+			widths.push(w)
+			widths[0] += w
+			this.visible[k] = true
+		}	
 		this.initTransition('graph', 'current', this.getMaxY() )
 	}
 

@@ -1,56 +1,39 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 	<head>
 		<meta charset="utf-8">
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" /> <!-- tell IE to disable compatibility mode-->
 		<meta name="viewport" content="width=device-width,initial-scale=1" >
-    <!--[if IE]>
-    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
 		<title>telegram-contest-vanilla-chart</title>
 		<style>
-			*, body {
-  			box-sizing: border-box;
-  			font: 18px 'Arial';
-			} 
-			.flex {
-				position: absolute;
-				display: flex;
+			*,::before,::after {
+				 box-sizing: border-box;
+				 padding: 0;
+				 margin:0;
+			}					
+			#app {
 				flex-direction: column;
-				left:0;
-				top:0;
-				width: 100vw;
 				height: 100vh;
-			 	min-height: 100vh;
-
 			}
 			.chart-container {
 				display: flex;
-				/*flex: 0 0 80%;*/
-				flex: 1;
+				flex: 0 0 80%;
 				width: 90%;
+				height: 80%;
 				margin-left: auto;
 				margin-right: auto;
 				font: 0.8rem 'Arial';
 			}
-			.label {
-				display: flex;
+			span {
 				width: 90%;
+				display: flex;
 				margin-left: auto;
 				margin-right: auto;
 				margin-top: 2rem;
 				font: 1.8rem 'Arial';
 			}
-			.footer {
-				display: flex;
-    		margin-top: auto;
-		    justify-content: center;
-		    margin-bottom: 1rem;
-			}
 
 			@media (max-width: 32rem){			
 				.chart-container {
-					flex: 0 0 70%;
 					width: 100%;
 				}
 			}
@@ -59,20 +42,23 @@
 
 
 	<body>
-		<noscript>
-			<strong>We're sorry but example doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-		</noscript>
-
-		<div class="flex">
-			<span class="label">Followers</span>
-			<div id="chart" class="chart-container"></div>
-			<span class="footer">Switch to night mode</span>
-		</div>
+		<div id="app"></div>
 
 		<script type="text/javascript" src="vanilla-chart.js"></script>
 		<script type="text/javascript" src="chart_data.json"></script>
 		<script>
-			window.chart = new VanillaChart('chart', data[0])
+			var app = document.getElementById('app')
+			
+			for (var i = 0; i < 5; i++)	{
+				var el = document.createElement('span')
+				el.innerText = 'Chart ' + (i+1) 
+				app.appendChild(el)
+				el = document.createElement('div')
+				el.id = 'chart' + i;	el.className = 'chart-container'
+				app.appendChild(el)
+				window.chart = new VanillaChart('chart' + i, data[i])
+			} 
+	
 		</script>
 	</body>
 </html>
