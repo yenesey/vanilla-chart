@@ -293,11 +293,12 @@ function VanillaChart(containerId, data) {
 		var scaleView = width / (data.columns[0].length - 2)
 		var scaleX = (1 / (rlRight - rlLeft))
 		var scaleY = height / maxY
-
 		var Y0 = y + height
+		var visCount = 0
 		ctx.lineWidth = lineWidth
 		ctx.lineJoin = 'round'
 		for (var name in visible) {
+			visCount++
 			ctx.beginPath()
 			ctx.strokeStyle = data.colors[name]
 			var dataY = _getColumn(data, name)
@@ -309,8 +310,16 @@ function VanillaChart(containerId, data) {
 			ctx.stroke()
 		}
 
-		if (!grid) return
+		if (grid && visCount === 0) {
+			var msg = 'No data to display'
+			var msgWidth = ctx.measureText(msg).width
+			ctx.fillStyle = labelColor
+			ctx.font = _fontShift(ctx.font, 4, false)
+			ctx.fillText(msg, width/2-msgWidth/2 , height/2)
+			return
+		}
 
+		if (!grid ) return
 		//-------------------------Y - lines / labels
 		ctx.lineWidth = 0.2
 		ctx.beginPath()
@@ -367,7 +376,7 @@ function VanillaChart(containerId, data) {
 				ctx.fill()
 				ctx.stroke()
 			}
-			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor, width)
+			//_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor, width)
 		}
 
 	}	// _drawGraph
@@ -438,7 +447,7 @@ function VanillaChart(containerId, data) {
 		var ctx = this.ctx
 		ctx.fillStyle = this.options.colors.background
 		ctx.fillRect(0, 0, this.vw, this.vh)
-	
+		ctx.font = this.font
 		_drawMinimap(this)
 		_drawControls(this)
 
@@ -449,13 +458,15 @@ function VanillaChart(containerId, data) {
 		ctx.font = this.font
 						// ctx, data,      								   y, height, width,    left,              right,              a, b,                          lineWidth,               grid
 		_drawGraph(ctx, this.data, this.visible, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          this.select, true, this.options.colors.label)
-
-		ctx.beginPath()
-		ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
 		var r = this._transitions.pointer.pos
-		ctx.arc(pointerX, pointerY, r,   0, 2*Math.PI, false)
-		if (r > 12)	ctx.arc(pointerX, pointerY, r-12,   0, 2*Math.PI, true)
-		ctx.fill()
+		if (r > 0) {
+			ctx.beginPath()
+			ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
+			
+			ctx.arc(pointerX, pointerY, r,   0, 2*Math.PI, false)
+			if (r > 12)	ctx.arc(pointerX, pointerY, r-12,   0, 2*Math.PI, true)
+			ctx.fill()
+		}
 		
 		if (_transitions(this._transitions)) this.draw() // -- re-call while transitions running
 	}
