@@ -376,6 +376,7 @@ function VanillaChart(containerId, data) {
 				ctx.fill()
 				ctx.stroke()
 			}
+			
 			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor, width)
 		}
 

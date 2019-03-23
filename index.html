@@ -11,7 +11,7 @@
 				 margin:0;
 			}	
 			header{
-				background-color: #636473;
+				background-color: #aaaafa;
 				display: flex;
 				width: 100%;
 			}
@@ -24,6 +24,7 @@
 				right: 5%;
 				top: 1.5rem;
 				font: 1.2rem 'Arial';
+				width: 170px;
 			}
 			#app {
 				flex-direction: column;
@@ -56,7 +57,7 @@
 	</head>
 
 
-	<body id="body">
+	<body>
 		<div>
 			<header><span>Demo app</span> <a id="switch" href="">Switch night mode</a> </header>
 			<div id="app"></div>
@@ -92,13 +93,17 @@
 				app.appendChild(el)
 				window.charts.push(new VanillaChart('chart' + i, data[i]))
 			} 
+			//day-night switch
 			var sw = document.getElementById('switch')
 			sw.addEventListener('click', function(e) {
 				e.preventDefault()
 				day = !day
 				sw.innerText = 'Switch ' + ['day', 'night'][Number(day)] + ' mode'
-				var body = document.getElementById('body')
-				body.style.backgroundColor = day?"#fff":"#333"
+				document.querySelector('body').style.backgroundColor = day?"#fff":"#333"
+				document.querySelector('header').style.backgroundColor = day?"#aaaafa":"#636473"
+				el = document.querySelectorAll('span,a')
+				for (var i = 0; i < 5; i++) el[i].style.color = day?"#333":"#fff"
+				//chart colors application is simple:	
 				window.charts[0].options.colors = colors[Number(day)]
 				for (var i = 0; i < 5; i++) window.charts[i].draw()
 			})

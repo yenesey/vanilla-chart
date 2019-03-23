@@ -4,7 +4,7 @@
   "description": "Telegram contest Mar 10-24, 2019",
   "main": "./src/vanilla-chart.js",
   "scripts": {
-    "minify": "uglifyjs ./src/vanilla-chart.js --compress --mangle --comments -o ./docs/vanilla-chart.js",
+    "minify": "uglifyjs ./src/vanilla-chart.js --compress --mangle --comments -o ./dist/vanilla-chart.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Denis Bogachev <denesey@gmail.com>",
