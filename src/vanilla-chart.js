@@ -30,7 +30,7 @@ var defaults = {
 
 var transition = {
 	run: false,
-	duration: 200,
+	duration: 250,
 	ts: 0,
 	from: 0,
 	to: 0,
@@ -79,7 +79,6 @@ function VanillaChart(containerId, data) {
 		graph: Object.create(transition),
 		pointer: Object.create(transition)
 	}
-	this._transitions.pointer.duration = 300
 
 	this.setData(data)
 
@@ -91,6 +90,7 @@ function VanillaChart(containerId, data) {
 		this.minimap.right = _round(this.vw * this.minimap.rlRight)
 		this.minimap.vh = _round(this.vh * this.options.minimapHeightRel)
 		this.controls.vh = _round(this.vh * 0.15) * (1 + Math.floor((this.controls.widths[0] + this.controls.h)/this.vw))
+		this.select = -1
 		this.draw()
 	}
 
@@ -236,7 +236,7 @@ function VanillaChart(containerId, data) {
 		return ctx
 	}
 
-	function _drawLabelBox(ctx, x, y, data, i, _labelHeight, labelColor) {
+	function _drawLabelBox(ctx, x, y, data, i, _labelHeight, labelColor, vw) {
 	// displays info for 1, 2 and more named columns
 		var p = 10
 		var date = _getColumn(data, 'x')[i]
@@ -254,6 +254,9 @@ function VanillaChart(containerId, data) {
 		}
 		width = _max(dateWidth, width) + p
 		x = x - width / 2
+		if (x < 0) x = 0
+		if (x + width > vw) x = vw - width
+
 		ctx.fillStyle = 'rgba(255,255,255, 0.9)'
 		ctx.strokeStyle = '#eee'
 		ctx.beginPath()
@@ -364,7 +367,7 @@ function VanillaChart(containerId, data) {
 				ctx.fill()
 				ctx.stroke()
 			}
-			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor)
+			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor, width)
 		}
 
 	}	// _drawGraph
@@ -404,8 +407,9 @@ function VanillaChart(containerId, data) {
 		var data = self.data
 		_iterateControls(self, function(r, col){
 			ctx.beginPath()
-			ctx.fillStyle = '#eeef'
-			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2).fill()
+			ctx.fillStyle = '#eee'
+			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2)
+			ctx.fill()
 			ctx.textBaseline = 'middle'
 			if (col in self.visible) {
 				ctx.beginPath()
@@ -415,7 +419,6 @@ function VanillaChart(containerId, data) {
 
 				ctx.beginPath()
 				ctx.fillStyle = '#fff'
-				
 				ctx.fillText('\u2713' , r.x + r.h/3, r.y + r.h/2)
 			} else {
 				ctx.beginPath()
@@ -484,7 +487,6 @@ function VanillaChart(containerId, data) {
 		
 		_drag.mode = _getPointingRegion(this, pointerX, pointerY)
 		if (_drag.mode > 0) {
-			event.preventDefault()
 			e.target.style.cursor = 'w-resize'
 			_drag.start = e.clientX
 			_drag.left = this.minimap.left
