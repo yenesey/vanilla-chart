@@ -11,7 +11,7 @@
 				 margin:0;
 			}	
 			header{
-				background-color: #d1d4ff;
+				background-color: #636473;
 				display: flex;
 				width: 100%;
 			}
@@ -65,9 +65,24 @@
 		<script type="text/javascript" src="vanilla-chart.js"></script>
 		<script type="text/javascript" src="chart_data.json"></script>
 		<script>
+			var colors = [{
+					background: '#333',
+					minimap: '#444',
+					minimapFrame: '#487d88',
+					minimapDrag: 'rgba(200, 190, 190, 0.2)',
+					label: '#aaa'
+			},{
+				background: '#fff',
+				minimap: '#f8f8ff',
+				minimapFrame: '#c8dde8',
+				minimapDrag: 'rgba(200, 190, 190, 0.2)',
+				label: '#aaa'
+			}]
+
 			var day = true
 			var app = document.getElementById('app')
 			var el = null
+			window.charts = []
 			for (var i = 0; i < 5; i++)	{
 				el = document.createElement('span')
 				el.innerText = '#' + (i+1) 
@@ -75,7 +90,7 @@
 				el = document.createElement('div')
 				el.id = 'chart' + i;	el.className = 'chart-container'
 				app.appendChild(el)
-				window.chart = new VanillaChart('chart' + i, data[i])
+				window.charts.push(new VanillaChart('chart' + i, data[i]))
 			} 
 			var sw = document.getElementById('switch')
 			sw.addEventListener('click', function(e) {
@@ -84,6 +99,8 @@
 				sw.innerText = 'Switch ' + ['day', 'night'][Number(day)] + ' mode'
 				var body = document.getElementById('body')
 				body.style.backgroundColor = day?"#fff":"#333"
+				window.charts[0].options.colors = colors[Number(day)]
+				for (var i = 0; i < 5; i++) window.charts[i].draw()
 			})
 		</script>
 	</body>
