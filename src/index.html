@@ -67,6 +67,7 @@
 		<script type="text/javascript" src="vanilla-chart.js"></script>
 		<script type="text/javascript" src="chart_data.json"></script>
 		<script>
+		document.addEventListener("DOMContentLoaded", function(e){
 			var colors = [{
 					background: '#333',
 					minimap: '#444',
@@ -80,11 +81,11 @@
 				minimapDrag: 'rgba(200, 190, 190, 0.2)',
 				label: '#aaa'
 			}]
-
+			
 			var day = true
 			var app = document.getElementById('app')
 			var el = null
-			window.charts = []
+
 			for (var i = 0; i < 5; i++)	{
 				el = document.createElement('span')
 				el.innerText = '#' + (i+1) 
@@ -92,8 +93,10 @@
 				el = document.createElement('div')
 				el.id = 'chart' + i;	el.className = 'chart-container'
 				app.appendChild(el)
-				window.charts.push(new VanillaChart('chart' + i, data[i]))
 			} 
+
+			window.charts = []
+			for (var i = 0; i < 5; i++) window.charts.push(new VanillaChart('chart' + i, data[i]))
 			// day-night switch
 			var sw = document.getElementById('switch')
 			sw.addEventListener('click', function(e) {
@@ -108,6 +111,7 @@
 				window.charts[0].options.colors = colors[Number(day)]
 				for (var i = 0; i < 5; i++) window.charts[i].draw()
 			})
+		})
 		</script>
 	</body>
 </html>

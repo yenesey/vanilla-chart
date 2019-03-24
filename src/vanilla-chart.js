@@ -42,10 +42,11 @@ var transition = {
 
 function VanillaChart(containerId, data) {
 /*
-	colors: {y0: "#3DC23F", y1: "#F34C44"}
-	columns: (3) [Array(113), Array(113), Array(113)]
-	names: {y0: "#0", y1: "#1"}
-	types: {y0: "line", y1: "line", x: "x"}
+	the data contract is:
+		colors: {y0: "#3DC23F", y1: "#F34C44"}
+		columns: (3) [Array(113), Array(113), Array(113)]
+		names: {y0: "#0", y1: "#1"}
+		types: {y0: "line", y1: "line", x: "x"}
 */
 	this.data = null
 	this.names = {}
