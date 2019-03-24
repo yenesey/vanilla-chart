@@ -91,7 +91,7 @@ function VanillaChart(containerId, data) {
 		this.minimap.left = _round(this.vw * this.minimap.rlLeft)
 		this.minimap.right = _round(this.vw * this.minimap.rlRight)
 		this.minimap.vh = _round(this.vh * this.options.minimapHeightRel)
-		this.controls.vh = _round(this.vh * 0.15) * (1 + Math.floor((this.controls.width + this.controls.h)/this.vw))
+		this.controls.vh = (this.controls.h + this.options.padding*2) * (1 + Math.floor((this.controls.width + this.controls.h)/this.vw))
 		this.select = -1
 		this.draw()
 	}
@@ -473,8 +473,9 @@ function VanillaChart(containerId, data) {
 		ctx.fillStyle = this.options.colors.background
 		ctx.fillRect(0, 0, this.vw, this.vh)
 		ctx.font = this.font
-		_drawMinimap(this)
 		_drawControls(this)
+		_drawMinimap(this)
+	
 
 		var h = _round(this.vh - this.minimap.vh - this.controls.vh)
 		_drawGraph(this, 0, h, true, 2, true, this._transitions.graph.pos)
