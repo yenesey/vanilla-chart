@@ -417,9 +417,8 @@ function VanillaChart(containerId, data) {
 		var data = self.data
 		_iterateControls(self, function(r, col){
 			ctx.beginPath()
-			ctx.fillStyle = '#eee'
-			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2)
-			ctx.fill()
+			ctx.fillStyle = self.options.colors.minimap
+			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2).fill()
 			ctx.textBaseline = 'middle'
 			if (col in self.visible) {
 				ctx.beginPath()
