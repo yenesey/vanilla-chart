@@ -364,22 +364,19 @@ function VanillaChart(containerId, data) {
 		ctx.stroke()
 
 		//-------------------------X - labels
-		var dataX = _getColumn(data, 'x')
-		var labelSize = symbolSize*5
-		var dense = _round(Math.sqrt((b-a) / (width / labelSize)))
-		console.log(dense)
-		i = a
-		var label, w
-		while (i < b) {
-			var x = (i * scaleView - left) * scaleX
-			if (x > symbolSize / 2) {
-				label = _getDateText(dataX[i+1], 2)
-				w = ctx.measureText(label).width
-				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
-			}
-			i+=Math.pow(2, dense)
-		}
+		var labelSize = symbolSize * 8
+		var dense =  _max(_abs(b - a) / width * labelSize, 1)
 
+		var dataX = _getColumn(data, 'x')
+		for (var i = a; i < b; i++) {
+			var label = _getDateText(dataX[i+1], 2)
+			var w = ctx.measureText(label).width
+
+			if (i % _round(dense) === 0) {
+				ctx.fillStyle = self.options.colors.label
+				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
+			}	
+		}
 		//-------------------------Selection
 		if (self.select !== -1) {
 			var i = _round((left * scaleX + self.select) / (scaleX * scaleView))
