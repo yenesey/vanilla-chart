@@ -48,7 +48,7 @@ function VanillaChart(containerId, data) {
 	types: {y0: "line", y1: "line", x: "x"}
 */
 	this.data = null
-	this.visible = {}
+	this.names = {}
 	this.options = defaults
 	this.container = document.getElementById(containerId)
 	if (!this.container) throw new Error('chart container not found!')
@@ -63,7 +63,7 @@ function VanillaChart(containerId, data) {
 	this.controls = {
 		h: 0,
 		vh: 0,
-		widths: [0]
+		width: 0
 	}
 
 	this.minimap = {
@@ -89,7 +89,7 @@ function VanillaChart(containerId, data) {
 		this.minimap.left = _round(this.vw * this.minimap.rlLeft)
 		this.minimap.right = _round(this.vw * this.minimap.rlRight)
 		this.minimap.vh = _round(this.vh * this.options.minimapHeightRel)
-		this.controls.vh = _round(this.vh * 0.15) * (1 + Math.floor((this.controls.widths[0] + this.controls.h)/this.vw))
+		this.controls.vh = _round(this.vh * 0.15) * (1 + Math.floor((this.controls.width + this.controls.h)/this.vw))
 		this.select = -1
 		this.draw()
 	}
@@ -127,15 +127,17 @@ function VanillaChart(containerId, data) {
 	function _iterateControls(self, cb) {
 		var pad = self.options.padding
 		var controls = self.controls
+		var names = self.names
 		var x = pad, i = 1
 		var y = self.vh - controls.vh + pad
 		for (var col in self.data.names) {
-			cb({x: x, y: y, w: controls.widths[i], h: controls.h}, col)
-			x = x + controls.widths[i] + pad
-			if (x > self.vw - (controls.h + pad*2)) {
+			if (x + names[col].width > self.vw - pad*2) {
 				x = pad
 				y = y + controls.h + pad
 			}
+			cb({x: x, y: y, w: names[col].width, h: controls.h}, col)
+			x = x + names[col].width + pad
+
 			i++
 		}
 	}
@@ -244,13 +246,15 @@ function VanillaChart(containerId, data) {
 		var dateWidth = ctx.measureText(dateLabel).width
 		var obj = {}
 		var width = 0
-		for (var key in visible) {
-			obj[key] = {}
-			obj[key].name = data.names[key]
-			obj[key].value = _getColumn(data, key)[i]
-			obj[key].width = _max(ctx.measureText(obj[key].name).width, ctx.measureText(obj[key].value).width)
-			obj[key].color = data.colors[key]
-			width += obj[key].width + p
+		for (var key in data.names) {
+			if (visible[key].visible) {
+				obj[key] = {}
+				obj[key].name = data.names[key]
+				obj[key].value = _getColumn(data, key)[i]
+				obj[key].width = _max(ctx.measureText(obj[key].name).width, ctx.measureText(obj[key].value).width)
+				obj[key].color = data.colors[key]
+				width += obj[key].width + p
+			}
 		}
 		width = _max(dateWidth, width) + p
 		x = x - width / 2
@@ -288,15 +292,15 @@ function VanillaChart(containerId, data) {
 		var ctx = self.ctx
 		var symbolSize = ctx.measureText('M').width
 		if (grid)	height = height - symbolSize - 8
-		var data = self.data
-		var visible = self.visible
+		var data = self.data, 
+				names = self.names;
 
-		var width = self.vw
-		var scaleView = width / (self.dataLength - 1)
-		var left = 0
-		var right = self.vw
-		var a = 0 
-		var b = self.dataLength
+		var width = self.vw,
+				scaleView = width / (self.dataLength - 1),
+				left = 0, 
+				right = self.vw,
+				a = 0,
+				b = self.dataLength;
 
 		if (useMinimap) {
 			left = self.minimap.left
@@ -305,17 +309,17 @@ function VanillaChart(containerId, data) {
 			b = _round(right / scaleView)
 		}
 		
- 		var rlLeft = left / width
-		var rlRight = right / width
-		var scaleX = (1 / (rlRight - rlLeft))
-		var scaleY = height / maxY
-		var Y0 = y + height
-		var visCount = 0
+		var rlLeft = left / width,
+				rlRight = right / width,
+				scaleX = (1 / (rlRight - rlLeft)),
+				scaleY = height / maxY,
+				Y0 = y + height,
+				visCount = 0;
 		
 		ctx.lineWidth = lineWidth
 		ctx.lineJoin = 'round'
 		ctx.font = self.font
-		for (var name in visible) {
+		for (var name in names) if (names[name].visible) {
 			visCount++
 			ctx.beginPath()
 			ctx.strokeStyle = data.colors[name]
@@ -384,7 +388,7 @@ function VanillaChart(containerId, data) {
 			ctx.stroke()
 
 			ctx.lineWidth = lineWidth
-			for (var name in visible) {
+			for (var name in names) if (names[name].visible) {
 				var dataY = _getColumn(data, name)
 				ctx.beginPath()
 				ctx.strokeStyle = data.colors[name]
@@ -395,7 +399,7 @@ function VanillaChart(containerId, data) {
 				ctx.stroke()
 			}
 			
-			_drawLabelBox(ctx, x, data, visible, i+1, symbolSize * 1.8,  self.options.colors.background, self.options.colors.minimap ,self.options.colors.label, width)
+			_drawLabelBox(ctx, x, data, self.names, i+1, symbolSize * 1.8,  self.options.colors.background, self.options.colors.minimap ,self.options.colors.label, width)
 		}
 
 	}	// _drawGraph
@@ -431,22 +435,23 @@ function VanillaChart(containerId, data) {
 
 	function _drawControls(self) {
 		var ctx = self.ctx
-		ctx.font = _fontShift(self.font, 2)
+		ctx.font = _fontShift(self.font, 4)
 		var data = self.data
 		_iterateControls(self, function(r, col){
 			ctx.beginPath()
 			ctx.fillStyle = self.options.colors.minimap
 			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2).fill()
 			ctx.textBaseline = 'middle'
-			if (col in self.visible) {
+			if (self.names[col].visible) {
 				ctx.beginPath()
 				ctx.fillStyle = data.colors[col]
 				ctx.arc(r.x + r.h/2, r.y+r.h/2, r.h/3, 0, 2*Math.PI, false)
 				ctx.fill()
 
+				//ctx.font = _fontShift(self.font, 4, true)
 				ctx.beginPath()
 				ctx.fillStyle = '#fff'
-				ctx.fillText('\u2713' , r.x + r.h/3, r.y + r.h/2)
+				ctx.fillText('\u2713' , r.x + r.h/2.7, r.y + r.h/2)
 			} else {
 				ctx.beginPath()
 				ctx.strokeStyle = data.colors[col]
@@ -541,15 +546,23 @@ function VanillaChart(containerId, data) {
 			throw new TypeError('incorrect <inputData> format')
 		}
 		var ctx = this.ctx
-		ctx.font = _fontShift(this.font, 2, true)
-		this.controls.h = ctx.measureText('M').width * 3
-		var widths = this.controls.widths = [0]
+		ctx.font = _fontShift(this.font, 4, true)
+		this.controls.h = ctx.measureText('M').width * 4
+		this.controls.width = 0
+		this.names = {}
 		for (var k in data.names)	{
 			var w = ctx.measureText(data.names[k]).width + this.controls.h + this.options.padding
-			widths.push(w)
-			widths[0] += w
-			this.visible[k] = true // visible by default
+			this.controls.width += w
+			this.names[k] = {
+				visible: true, // visible by default
+				width: w
+			}
 		}	
+		this.initTransition('graph', 'current', this.getMaxY() )
+	}
+
+	this.setVisibility = function(col, vis) {
+		this.names[col].visible = (typeof vis === 'undefined')? !this.names[col].visible : vis
 		this.initTransition('graph', 'current', this.getMaxY() )
 	}
 
@@ -557,20 +570,11 @@ function VanillaChart(containerId, data) {
 		var max = 0
 		a = a || 0
 		b = b || this.dataLength
-		for (var name in this.visible) {
+		for (var name in this.names) if (this.names[name].visible) {
 			var column = _getColumn(this.data, name)
 			for (var i = a + 1; i < b + 1; i++) max = _max(max, column[i])
 		}
 		return max
-	}
-
-	this.setVisibility = function(col, vis) {
-		if (typeof vis === 'undefined') {
-			if (col in this.visible) delete this.visible[col]; else this.visible[col] = true
-		} else {
-			if (vis) this.visible[col] = true; else delete this.visible[col]
-		}
-		this.initTransition('graph', 'current', this.getMaxY() )
 	}
 
 	this.initTransition = function(key, from, to, onComplete) {
