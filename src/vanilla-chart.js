@@ -398,7 +398,7 @@ function VanillaChart(containerId, data) {
 				ctx.stroke()
 			}
 			
-			_drawLabelBox(ctx, x, data, self.names, i+1, symbolSize * 1.8,  self.options.colors.background, self.options.colors.minimap ,self.options.colors.label, width)
+			_drawLabelBox(ctx, x, data, self.names, i+1, symbolSize * 1.4,  self.options.colors.background, self.options.colors.minimap ,self.options.colors.label, width)
 		}
 
 	}	// _drawGraph
