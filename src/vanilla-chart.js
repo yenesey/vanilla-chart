@@ -24,7 +24,7 @@ var defaults = {
 		minimap: '#f8f8ff',
 		minimapFrame: '#c8dde8',
 		minimapDrag: 'rgba(200, 190, 190, 0.2)',
-		label: '#aaa',
+		label: '#666',
 		labelBackground: 'rgba(240, 240, 250, 0.82)'
 	}
 }
@@ -280,9 +280,9 @@ function VanillaChart(containerId, data) {
 			ctx.fillStyle = obj[key].color
 			w = obj[key].width
 			ctx.font = bold
-			ctx.fillText(obj[key].value , _x + p,	_labelHeight*2 + p/4)
+			ctx.fillText(obj[key].value , _x + p,	_labelHeight*2 + p/1.4)
 			ctx.font = font
-			ctx.fillText(obj[key].name ,  _x + p,	_labelHeight*3 + p/4)
+			ctx.fillText(obj[key].name ,  _x + p,	_labelHeight*3 + p/2)
 			_x = _x + w + 10
 		}
 		ctx.fill()
@@ -394,7 +394,7 @@ function VanillaChart(containerId, data) {
 				var dataY = _getColumn(data, name)
 				ctx.beginPath()
 				ctx.strokeStyle = data.colors[name]
-				ctx.fillStyle = '#fff'
+				ctx.fillStyle = self.options.colors.background
 				var y = Y0 - dataY[i+1] * scaleY
 				ctx.arc(x, y, 4, 0, 2*Math.PI, false)
 				ctx.fill()
@@ -559,7 +559,7 @@ function VanillaChart(containerId, data) {
 			this.controls.width += w
 			this.names[k] = {
 				visible: true, // visible by default
-				width: w - this.options.padding * 2
+				width: w - this.options.padding
 			}
 		}	
 		this.initTransition('graph', 'current', this.getMaxY() )
