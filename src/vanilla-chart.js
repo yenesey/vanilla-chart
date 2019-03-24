@@ -449,10 +449,11 @@ function VanillaChart(containerId, data) {
 				ctx.arc(r.x + r.h/2, r.y+r.h/2, r.h/3, 0, 2*Math.PI, false)
 				ctx.fill()
 
-				//ctx.font = _fontShift(self.font, 4, true)
+				ctx.font = _fontShift(self.font, 4, true)
 				ctx.beginPath()
 				ctx.fillStyle = '#fff'
-				ctx.fillText('\u2713' , r.x + r.h/2.7, r.y + r.h/2)
+				ctx.fillText('\u2713' , r.x + r.h*0.35, r.y + r.h*0.52)
+				ctx.font = _fontShift(self.font, 4)
 			} else {
 				ctx.beginPath()
 				ctx.strokeStyle = data.colors[col]
