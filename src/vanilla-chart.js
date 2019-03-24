@@ -91,7 +91,7 @@ function VanillaChart(containerId, data) {
 		this.minimap.left = _round(this.vw * this.minimap.rlLeft)
 		this.minimap.right = _round(this.vw * this.minimap.rlRight)
 		this.minimap.vh = _round(this.vh * this.options.minimapHeightRel)
-		this.controls.vh = (this.controls.h + this.options.padding*2) * (1 + Math.floor((this.controls.width + this.controls.h)/this.vw))
+		this.controls.vh = (this.controls.h + this.options.padding*2) * (1 + Math.floor(this.controls.width/this.vw))
 		this.select = -1
 		this.draw()
 	}
@@ -130,17 +130,18 @@ function VanillaChart(containerId, data) {
 		var pad = self.options.padding
 		var controls = self.controls
 		var names = self.names
-		var x = pad, i = 1
+		var x = pad, i = 0
 		var y = self.vh - controls.vh + pad
 		for (var col in self.data.names) {
-			if (x + names[col].width > self.vw - pad) {
+			if (x + names[col].width + pad > self.vw) {
 				x = pad
 				y = y + controls.h + pad
 			}
-			cb({x: x, y: y, w: names[col].width, h: controls.h}, col)
+			if (cb) cb({x: x, y: y, w: names[col].width, h: controls.h - pad}, col)
 			x = x + names[col].width + pad
 			i++
 		}
+		return i
 	}
 
 	function _inRect(x, y, r) {
@@ -452,7 +453,7 @@ function VanillaChart(containerId, data) {
 				ctx.font = _fontShift(self.font, 4, true)
 				ctx.beginPath()
 				ctx.fillStyle = '#fff'
-				ctx.fillText('\u2713' , r.x + r.h*0.35, r.y + r.h*0.52)
+				ctx.fillText('\u2713' , r.x + r.h*0.33, r.y + r.h*0.52)
 				ctx.font = _fontShift(self.font, 4)
 			} else {
 				ctx.beginPath()
@@ -550,15 +551,15 @@ function VanillaChart(containerId, data) {
 		}
 		var ctx = this.ctx
 		ctx.font = _fontShift(this.font, 4, true)
-		this.controls.h = ctx.measureText('M').width * 3.5
+		this.controls.h = _round(ctx.measureText('M').width * 3.5)
 		this.controls.width = 0
 		this.names = {}
 		for (var k in data.names)	{
-			var w = ctx.measureText(data.names[k]).width + this.controls.h + this.options.padding
+			var w = ctx.measureText(data.names[k]).width + this.controls.h + this.options.padding * 2
 			this.controls.width += w
 			this.names[k] = {
 				visible: true, // visible by default
-				width: w
+				width: w - this.options.padding * 2
 			}
 		}	
 		this.initTransition('graph', 'current', this.getMaxY() )
