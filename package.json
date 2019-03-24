@@ -4,7 +4,8 @@
   "description": "Telegram contest Mar 10-24, 2019",
   "main": "./src/vanilla-chart.js",
   "scripts": {
-    "minify": "uglifyjs ./src/vanilla-chart.js --compress --mangle --source-map --comments -o ./dist/vanilla-chart.min.js",
+    "minify": "uglifyjs ./src/vanilla-chart.js --compress --mangle --source-map url=vanilla-chart.min.map --comments -o ./dist/vanilla-chart.min.js",
+    "gh-pages": "git subtree push --prefix dist origin gh-pages",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Denis Bogachev <denesey@gmail.com>",
