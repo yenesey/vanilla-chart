@@ -24,7 +24,8 @@ var defaults = {
 		minimap: '#f8f8ff',
 		minimapFrame: '#c8dde8',
 		minimapDrag: 'rgba(200, 190, 190, 0.2)',
-		label: '#aaa'
+		label: '#aaa',
+		labelBackground: 'rgba(220, 220, 250, 0.32)'
 	}
 }
 
@@ -383,8 +384,8 @@ function VanillaChart(containerId, data) {
 			ctx.strokeStyle = 'grey'
 			ctx.lineWidth = 0.5
 			var x = i * scaleView * scaleX - left * scaleX
-			ctx.moveTo(x, symbolSize * 1.8)
-			ctx.lineTo(x, height - symbolSize * 1.8)
+			ctx.moveTo(x, symbolSize * 5)
+			ctx.lineTo(x, height)
 			ctx.stroke()
 
 			ctx.lineWidth = lineWidth
@@ -399,7 +400,7 @@ function VanillaChart(containerId, data) {
 				ctx.stroke()
 			}
 			
-			_drawLabelBox(ctx, x, data, self.names, i+1, symbolSize * 1.4,  self.options.colors.background, self.options.colors.minimap ,self.options.colors.label, width)
+			_drawLabelBox(ctx, x, data, self.names, i+1, symbolSize * 1.4,  self.options.colors.labelBackground, self.options.colors.minimap ,self.options.colors.label, width)
 		}
 
 	}	// _drawGraph
