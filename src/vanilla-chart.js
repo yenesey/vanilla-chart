@@ -236,7 +236,7 @@ function VanillaChart(containerId, data) {
 		return ctx
 	}
 
-	function _drawLabelBox(ctx, x, y, data, i, _labelHeight, labelColor, vw) {
+	function _drawLabelBox(ctx, x, data, visible, i, _labelHeight, bkColor, borderColor, labelColor, vw) {
 	// displays info for 1, 2 and more named columns
 		var p = 10
 		var date = _getColumn(data, 'x')[i]
@@ -244,21 +244,21 @@ function VanillaChart(containerId, data) {
 		var dateWidth = ctx.measureText(dateLabel).width
 		var obj = {}
 		var width = 0
-		for (var key in data.names) {
+		for (var key in visible) {
 			obj[key] = {}
 			obj[key].name = data.names[key]
 			obj[key].value = _getColumn(data, key)[i]
 			obj[key].width = _max(ctx.measureText(obj[key].name).width, ctx.measureText(obj[key].value).width)
 			obj[key].color = data.colors[key]
-			width += obj[key].width+p
+			width += obj[key].width + p
 		}
 		width = _max(dateWidth, width) + p
 		x = x - width / 2
 		if (x < 0) x = 0
 		if (x + width > vw) x = vw - width
 
-		ctx.fillStyle = 'rgba(255,255,255, 0.9)'
-		ctx.strokeStyle = '#eee'
+		ctx.fillStyle = bkColor
+		ctx.strokeStyle = borderColor
 		ctx.beginPath()
 		_drawRoundedRect(ctx, x, 1, width, _labelHeight * 3 + p, 6).fill()
 		ctx.stroke()
@@ -283,20 +283,38 @@ function VanillaChart(containerId, data) {
 	}
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	function _drawGraph(ctx, data, visible, y, height, width, left, right, a, b, maxY, lineWidth, select, grid, labelColor) {
+	function _drawGraph(self, y, height, useMinimap, lineWidth, grid, maxY) {
 
+		var ctx = self.ctx
 		var symbolSize = ctx.measureText('M').width
 		if (grid)	height = height - symbolSize - 8
+		var data = self.data
+		var visible = self.visible
 
+		var width = self.vw
+		var scaleView = width / (self.dataLength - 1)
+		var left = 0
+		var right = self.vw
+		var a = 0 
+		var b = self.dataLength
+
+		if (useMinimap) {
+			left = self.minimap.left
+			right = self.minimap.right
+			a = _round(left / scaleView)
+			b = _round(right / scaleView)
+		}
+		
  		var rlLeft = left / width
 		var rlRight = right / width
-		var scaleView = width / (data.columns[0].length - 2)
 		var scaleX = (1 / (rlRight - rlLeft))
 		var scaleY = height / maxY
 		var Y0 = y + height
 		var visCount = 0
+		
 		ctx.lineWidth = lineWidth
 		ctx.lineJoin = 'round'
+		ctx.font = self.font
 		for (var name in visible) {
 			visCount++
 			ctx.beginPath()
@@ -313,7 +331,7 @@ function VanillaChart(containerId, data) {
 		if (grid && visCount === 0) {
 			var msg = 'No data to display'
 			var msgWidth = ctx.measureText(msg).width
-			ctx.fillStyle = labelColor
+			ctx.fillStyle = self.options.colors.label
 			ctx.font = _fontShift(ctx.font, 4, false)
 			ctx.fillText(msg, width/2-msgWidth/2 , height/2)
 			return
@@ -325,7 +343,7 @@ function VanillaChart(containerId, data) {
 		ctx.beginPath()
 		ctx.strokeStyle = 'grey'
 		var stepY = maxY / 8
-		ctx.fillStyle = labelColor
+		ctx.fillStyle = self.options.colors.label
 		for (var y = 0; y < 8; y++) {
 			ctx.moveTo(0, Y0 - y * stepY * scaleY)
 			ctx.lineTo(width, Y0 - y * stepY * scaleY)
@@ -343,7 +361,7 @@ function VanillaChart(containerId, data) {
 			var w = ctx.measureText(label).width
 
 			if (i % _round(dense) === 0) {
-				ctx.fillStyle = labelColor
+				ctx.fillStyle = self.options.colors.label
 				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
 			}	
 /*
@@ -355,8 +373,8 @@ function VanillaChart(containerId, data) {
 		}
 
 		//-------------------------Selection
-		if (select !== -1) {
-			var i = _round((left * scaleX + select) / (scaleX * scaleView))
+		if (self.select !== -1) {
+			var i = _round((left * scaleX + self.select) / (scaleX * scaleView))
 			ctx.beginPath()
 			ctx.strokeStyle = 'grey'
 			ctx.lineWidth = 0.5
@@ -377,7 +395,7 @@ function VanillaChart(containerId, data) {
 				ctx.stroke()
 			}
 			
-			_drawLabelBox(ctx, x, 0, data, i+1, symbolSize * 1.8, labelColor, width)
+			_drawLabelBox(ctx, x, data, visible, i+1, symbolSize * 1.8,  self.options.colors.background, self.options.colors.minimap ,self.options.colors.label, width)
 		}
 
 	}	// _drawGraph
@@ -400,8 +418,8 @@ function VanillaChart(containerId, data) {
 
 		ctx.fillRect(r.x + sb, r.y, r.w-sb*2, 2)
 		ctx.fillRect(r.x + sb, r.y+r.h-2, r.w-sb*2, 2)
-		_drawGraph(ctx, self.data, self.visible, r.y, r.h,	self.vw,  0, self.vw, 0, self.dataLength, self.getMaxY(1, self.dataLength), 1,  -1, false)
 
+		_drawGraph(self,r.y, r.h, false, 1, false, self.getMaxY(1, self.dataLength))
 		//animation
 		if (_drag.mode !== 0) {
 			ctx.beginPath()
@@ -452,17 +470,12 @@ function VanillaChart(containerId, data) {
 		_drawControls(this)
 
 		var h = _round(this.vh - this.minimap.vh - this.controls.vh)
-		var scaleView = this.vw / (this.dataLength - 1)
-		var a = _round(this.minimap.left / scaleView) // a, b == 0..dataLength
-		var b = _round(this.minimap.right / scaleView)
-		ctx.font = this.font
-						// ctx, data,      								   y, height, width,    left,              right,              a, b,                          lineWidth,               grid
-		_drawGraph(ctx, this.data, this.visible, 0, h, 			this.vw,  this.minimap.left, this.minimap.right, a, b, this._transitions.graph.pos, 2,          this.select, true, this.options.colors.label)
+		_drawGraph(this, 0, h, true, 2, true, this._transitions.graph.pos)
+		
 		var r = this._transitions.pointer.pos
 		if (r > 0) {
 			ctx.beginPath()
 			ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
-			
 			ctx.arc(pointerX, pointerY, r,   0, 2*Math.PI, false)
 			if (r > 12)	ctx.arc(pointerX, pointerY, r-12,   0, 2*Math.PI, true)
 			ctx.fill()
@@ -535,7 +548,7 @@ function VanillaChart(containerId, data) {
 			var w = ctx.measureText(data.names[k]).width + this.controls.h + this.options.padding
 			widths.push(w)
 			widths[0] += w
-			this.visible[k] = true
+			this.visible[k] = true // visible by default
 		}	
 		this.initTransition('graph', 'current', this.getMaxY() )
 	}

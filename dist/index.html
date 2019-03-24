@@ -102,7 +102,7 @@
 				document.querySelector('body').style.backgroundColor = day?"#fff":"#333"
 				document.querySelector('header').style.backgroundColor = day?"#aaaafa":"#636473"
 				el = document.querySelectorAll('span,a')
-				for (var i = 0; i < 5; i++) el[i].style.color = day?"#333":"#fff"
+				for (var i = 0; i < el.length; i++) el[i].style.color = day?"#333":"#fff"
 				//chart colors application is simple:	
 				window.charts[0].options.colors = colors[Number(day)]
 				for (var i = 0; i < 5; i++) window.charts[i].draw()
