@@ -131,13 +131,12 @@ function VanillaChart(containerId, data) {
 		var x = pad, i = 1
 		var y = self.vh - controls.vh + pad
 		for (var col in self.data.names) {
-			if (x + names[col].width > self.vw - pad*2) {
+			if (x + names[col].width > self.vw - pad) {
 				x = pad
 				y = y + controls.h + pad
 			}
 			cb({x: x, y: y, w: names[col].width, h: controls.h}, col)
 			x = x + names[col].width + pad
-
 			i++
 		}
 	}
