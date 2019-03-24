@@ -16,7 +16,7 @@ function _listen(target, events, handler, listen) {
 }
 
 var defaults = {
-	padding: 10,
+	padding: 5,
 	minimapHeightRel: 0.14,
 	minimapBandSize: 12,
 	colors: {
