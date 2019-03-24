@@ -309,7 +309,7 @@ function VanillaChart(containerId, data) {
 			right = self.vw,
 			a = 0,
 			b = self.dataLength-1;
-		if (useMinimap){
+		if (useMinimap) {
 			a = self.minimap.a,
 			b = self.minimap.b,
 			left = self.minimap.left, 
@@ -359,33 +359,25 @@ function VanillaChart(containerId, data) {
 		for (var y = 0; y < 8; y++) {
 			ctx.moveTo(0, Y0 - y * stepY * scaleY)
 			ctx.lineTo(width, Y0 - y * stepY * scaleY)
-			ctx.fillText(_round(y * stepY).toString(), 5, Y0 - y * stepY  * scaleY - symbolSize)
+			ctx.fillText(_round(y * stepY).toString(), 5, Y0 - y * stepY  * scaleY )
 		}
 		ctx.stroke()
 
 		//-------------------------X - labels
-		var labelSize = symbolSize * 8
-		var dense =  _max(_abs(b - a) / width * labelSize, 1)
-/*
-		var l = []
-		for (var i = left; i < right; i += labelSize) l.push(i)
-		console.log(l)
-*/
 		var dataX = _getColumn(data, 'x')
-		for (var i = a; i < b; i++) {
-			var label = _getDateText(dataX[i+1], 2)
-			var w = ctx.measureText(label).width
-
-			if (i % _round(dense) === 0) {
-				ctx.fillStyle = self.options.colors.label
-				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
-			}	
-/*
-			if (i % (_round(dense) -1) === 0) {
-				ctx.fillStyle = 'rgba(100, 100, 100, ' + (1 - (dense - Math.floor(dense)))   +  ')'
+		var labelSize = symbolSize*5
+		var dense = _round(Math.sqrt((b-a) / (width / labelSize)))
+		console.log(dense)
+		i = a
+		var label, w
+		while (i < b) {
+			var x = (i * scaleView - left) * scaleX
+			if (x > symbolSize / 2) {
+				label = _getDateText(dataX[i+1], 2)
+				w = ctx.measureText(label).width
 				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
 			}
-*/
+			i+=Math.pow(2, dense)
 		}
 
 		//-------------------------Selection
