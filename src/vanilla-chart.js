@@ -547,7 +547,7 @@ function VanillaChart(containerId, data) {
 		}
 		var ctx = this.ctx
 		ctx.font = _fontShift(this.font, 4, true)
-		this.controls.h = ctx.measureText('M').width * 4
+		this.controls.h = ctx.measureText('M').width * 3.5
 		this.controls.width = 0
 		this.names = {}
 		for (var k in data.names)	{
