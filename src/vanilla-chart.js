@@ -333,9 +333,11 @@ function VanillaChart(containerId, data) {
 			ctx.strokeStyle = data.colors[name]
 			var dataY = _getColumn(data, name)
 			// [a..b] - no need offscreen drawing
-			for (var i = a; i <= b; i++) ctx.lineTo(
+			var _a = _max(a-1, 0), 
+			var _b = _min(b+1, self.dataLength-1)
+			for (var i = _a; i <= _b; i++) ctx.lineTo(
 				(i * scaleView - left) * scaleX,
-				Y0 - dataY[i + 1] * scaleY
+				Y0 - dataY[i+1] * scaleY
 			)
 			ctx.stroke()
 		}
