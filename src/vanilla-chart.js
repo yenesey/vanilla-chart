@@ -378,12 +378,12 @@ function VanillaChart(containerId, data) {
 		ctx.stroke()
 
 		//-------------------------X - labels
-		var labelSize = _round(symbolSize * 6)
-		// this is for debug (I have run out of tim to polish label animation)
-		// ctx.strokeStyle = '#f00';ctx.lineWidth = 2;ctx.beginPath();	ctx.moveTo(0, height-2);ctx.lineTo(labelSize, height-2);ctx.stroke()
-
-		var dense = _round(_max(0, _log(2, labelSize/ (scaleView * scaleX))))	// (scaleView * scaleX) - in fact is a distance between 2 near points
-		var i = a, label, w, dataX = _getColumn(data, 'x')
+		var labelSize = _round(symbolSize * 7)
+		//have run out of time to polish label animation
+		var dense = _max(0, _log(2, labelSize/ (scaleView * scaleX)))	// (scaleView * scaleX) - in fact is a distance between 2 near points
+		var i = 1, label, w, dataX = _getColumn(data, 'x');
+//		var alpha = ((dense - Math.floor(dense)))
+		dense = _round(dense)
 		while (i < b) {
 			var x = (i * scaleView - left) * scaleX
 			if (x > symbolSize) {
@@ -393,6 +393,7 @@ function VanillaChart(containerId, data) {
 			}
 			i += Math.pow(2, dense)
 		}
+
 		//-------------------------Selection
 		if (self.select !== -1) {
 			var i = _round((left * scaleX + self.select) / (scaleX * scaleView))
@@ -539,7 +540,7 @@ function VanillaChart(containerId, data) {
 		
 		_drag.mode = _getPointingRegion(this, pointerX, pointerY)
 		if (_drag.mode > 0) {
-			e.target.style.cursor = 'w-resize'
+			event.target.style.cursor = 'w-resize'
 			_drag.start = e.clientX
 			_drag.left = this.minimap.left
 			_drag.right = this.minimap.right
