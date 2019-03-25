@@ -6,7 +6,10 @@ var
 	_min = Math.min, 
 	_max = Math.max,
 	_round = Math.round,
-	_abs = Math.abs
+	_abs = Math.abs,
+	_log = function(x,y) {
+		 return Math.log(y) / Math.log(x)
+	}
 
 function _listen(target, events, handler, listen) {
 	for (var i = 0; i < events.length; i++)	
@@ -115,6 +118,17 @@ function VanillaChart(containerId, data) {
 		doneBnd: null
 	}
 	
+	function _getMaxY (self, useMinimap) {
+		var max = 0
+		var a = useMinimap ? self.minimap.a : 0
+		var b = useMinimap ? self.minimap.b : self.dataLength - 1
+		for (var name in self.names) if (self.names[name].visible) {
+			var column = _getColumn(self.data, name)
+			for (var i = a; i <= b; i++)  max = _max(max, column[i+1])
+		}
+		return max
+	}
+
 	function _getMinimapRect(self) {
 		var mm = self.minimap
 		var margin = _round(mm.vh * 0.10)
@@ -217,7 +231,7 @@ function VanillaChart(containerId, data) {
 			mm.right = _max(mm.right, mm.left + sbSize * 2 + 1)
 		}
 		_calcMinimap(this)
-		this.initTransition('graph', 'current', this.getMaxY(true) )
+		this.initTransition('graph', 'current', _getMaxY(this, true) )
 	}
 
 	function _dragDone(e) {
@@ -310,8 +324,8 @@ function VanillaChart(containerId, data) {
 			a = 0,
 			b = self.dataLength-1;
 		if (useMinimap) {
-			a = self.minimap.a,
-			b = self.minimap.b,
+			a = _max(0, self.minimap.a - 1),
+			b = _min(self.minimap.b + 1, self.dataLength-1),
 			left = self.minimap.left, 
 			right = self.minimap.right
 		}
@@ -333,9 +347,7 @@ function VanillaChart(containerId, data) {
 			ctx.strokeStyle = data.colors[name]
 			var dataY = _getColumn(data, name)
 			// [a..b] - no need offscreen drawing
-			var _a = _max(a-1, 0)
-			var _b = _min(b+1, self.dataLength-1)
-			for (var i = _a; i <= _b; i++) ctx.lineTo(
+			for (var i = a; i <= b; i++) ctx.lineTo(
 				(i * scaleView - left) * scaleX,
 				Y0 - dataY[i+1] * scaleY
 			)
@@ -366,18 +378,20 @@ function VanillaChart(containerId, data) {
 		ctx.stroke()
 
 		//-------------------------X - labels
-		var labelSize = symbolSize * 8
-		var dense =  _max(_abs(b - a) / width * labelSize, 1)
+		var labelSize = _round(symbolSize * 6)
+		// this is for debug (I have run out of tim to polish label animation)
+		// ctx.strokeStyle = '#f00';ctx.lineWidth = 2;ctx.beginPath();	ctx.moveTo(0, height-2);ctx.lineTo(labelSize, height-2);ctx.stroke()
 
-		var dataX = _getColumn(data, 'x')
-		for (var i = a; i < b; i++) {
-			var label = _getDateText(dataX[i+1], 2)
-			var w = ctx.measureText(label).width
-
-			if (i % _round(dense) === 0) {
-				ctx.fillStyle = self.options.colors.label
-				ctx.fillText(label, _round((i * scaleView - left) * scaleX - w / 2),	Y0 + symbolSize + 6)
-			}	
+		var dense = _round(_max(0, _log(2, labelSize/ (scaleView * scaleX))))	// (scaleView * scaleX) - in fact is a distance between 2 near points
+		var i = a, label, w, dataX = _getColumn(data, 'x')
+		while (i < b) {
+			var x = (i * scaleView - left) * scaleX
+			//if (x > 20) {
+				label = _getDateText(dataX[i+1], 2)
+				w = ctx.measureText(label).width
+				ctx.fillText(label, _round(x - w / 2),	Y0 + symbolSize + 6)
+			//}
+			i += Math.pow(2, dense)
 		}
 		//-------------------------Selection
 		if (self.select !== -1) {
@@ -425,7 +439,7 @@ function VanillaChart(containerId, data) {
 		ctx.fillRect(r.x + sb, r.y, r.w-sb*2, 2)
 		ctx.fillRect(r.x + sb, r.y+r.h-2, r.w-sb*2, 2)
 
-		_drawGraph(self,r.y, r.h, false, 1, false, self.getMaxY(false))
+		_drawGraph(self,r.y, r.h, false, 1, false, _getMaxY(self, false))
 
 		//animation
 		if (_drag.mode !== 0) {
@@ -477,7 +491,7 @@ function VanillaChart(containerId, data) {
 		ctx.font = this.font
 		if (this.minimap.b === 0 ) {
 			_calcMinimap(this)
-			this.initTransition('graph', 'current', this.getMaxY(true) )
+			this.initTransition('graph', 'current', _getMaxY(this, true) )
 		}
 
 		_drawControls(this)
@@ -567,23 +581,12 @@ function VanillaChart(containerId, data) {
 				width: w - this.options.padding
 			}
 		}
-		this.initTransition('graph', 'current', this.getMaxY(true) )
+		this.initTransition('graph', 'current', _getMaxY(this, true) )
 	}
 
 	this.setVisibility = function(col, vis) {
 		this.names[col].visible = (typeof vis === 'undefined')? !this.names[col].visible : vis
-		this.initTransition('graph', 'current', this.getMaxY(true) )
-	}
-
-	this.getMaxY = function(useMinimap) {
-		var max = 0
-		var a = useMinimap ? this.minimap.a : 0
-		var b = useMinimap ? this.minimap.b : this.dataLength - 1
-		for (var name in this.names) if (this.names[name].visible) {
-			var column = _getColumn(this.data, name)
-			for (var i = a; i <= b; i++)  max = _max(max, column[i+1])
-		}
-		return max
+		this.initTransition('graph', 'current', _getMaxY(this, true) )
 	}
 
 	this.initTransition = function(key, from, to, onComplete) {
