@@ -21,7 +21,7 @@ var defaults = {
 	minimapBandSize: 12,
 	colors: {
 		background: '#fff',
-		minimap: '#f8f8ff',
+		minimap: '#f4f8ff',
 		minimapFrame: '#c8dde8',
 		minimapDrag: 'rgba(200, 190, 190, 0.2)',
 		label: '#666',
@@ -333,7 +333,7 @@ function VanillaChart(containerId, data) {
 			ctx.strokeStyle = data.colors[name]
 			var dataY = _getColumn(data, name)
 			// [a..b] - no need offscreen drawing
-			var _a = _max(a-1, 0), 
+			var _a = _max(a-1, 0)
 			var _b = _min(b+1, self.dataLength-1)
 			for (var i = _a; i <= _b; i++) ctx.lineTo(
 				(i * scaleView - left) * scaleX,
@@ -418,15 +418,15 @@ function VanillaChart(containerId, data) {
 		ctx.fillRect(0, r.y, r.x + sb, r.h)
 		ctx.fillRect(r.x + r.w - sb, r.y, self.vw - r.x - r.w + sb , r.h)
 
-   	ctx.fillStyle = colors.minimapFrame
+		ctx.fillStyle = colors.minimapFrame
 		_drawRoundedRect(ctx, r.x,            r.y, sb, r.h, 6, [1,1,0,0])
 		_drawRoundedRect(ctx, r.x + r.w - sb, r.y, sb, r.h, 6, [0,0,1,1])
 		ctx.fill()
-
 		ctx.fillRect(r.x + sb, r.y, r.w-sb*2, 2)
 		ctx.fillRect(r.x + sb, r.y+r.h-2, r.w-sb*2, 2)
 
 		_drawGraph(self,r.y, r.h, false, 1, false, self.getMaxY(false))
+
 		//animation
 		if (_drag.mode !== 0) {
 			ctx.beginPath()
