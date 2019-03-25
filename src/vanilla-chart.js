@@ -33,7 +33,7 @@ var defaults = {
 
 var transition = {
 	run: false,
-	duration: 250,
+	duration: 200,
 	ts: 0,
 	from: 0,
 	to: 0,
@@ -367,23 +367,24 @@ function VanillaChart(containerId, data) {
 		ctx.lineWidth = 0.2
 		ctx.beginPath()
 		ctx.strokeStyle = 'grey'
-		var stepY = maxY / 8
 		ctx.fillStyle = self.options.colors.label
-		for (var y = 0; y < 8; y++) {
-			ctx.moveTo(0, Y0 - y * stepY * scaleY)
-			ctx.lineTo(width, Y0 - y * stepY * scaleY)
-			ctx.fillText(_round(y * stepY).toString(), 5, Y0 - y * stepY  * scaleY )
+		var dense = _round(_max(0, _log(2, (height / 6)/ scaleY)))
+		var i = 0
+		while (i < maxY) {
+			var y = i * scaleY
+			ctx.moveTo(0, Y0 - y)
+			ctx.lineTo(width, Y0 - y)
+			ctx.fillText(_round(i).toString(), 5, Y0 - y )
+			i += Math.pow(2, dense)
 		}
 		ctx.stroke()
 
 		//-------------------------X - labels
 		var labelSize = _round(symbolSize * 7)
-		//have run out of time to polish label animation
-		var dense = _round(_max(0, _log(2, labelSize/ (scaleView * scaleX))))	// (scaleView * scaleX) - in fact is a distance between 2 near points
-//		var alpha = ((dense - Math.floor(dense)))
+		var dense = _round(_max(0, _log(2, labelSize / (scaleView * scaleX))))	// (scaleView * scaleX) - in fact is a distance between 2 near points
+		//run out of time to polish label animation
+		//		var alpha = ((dense - Math.floor(dense)))
 		var i = 1, label, w, dataX = _getColumn(data, 'x');
-
-
 		while (i < b) {
 			var x = (i * scaleView - left) * scaleX
 			if (x > symbolSize) {
@@ -548,7 +549,7 @@ function VanillaChart(containerId, data) {
 			_drag.doneBnd = _dragDone.bind(this)
 			_listen(document, ['mousemove', 'touchmove'], _drag.runBnd)
 			_listen(document, ['mouseup', 'touchend'], _drag.doneBnd)
-			this.initTransition('minimap', 'current', _round(this.minimap.vh / 2) )
+			this.initTransition('minimap', 'current', _round(this.minimap.vh*0.65) )
 		} else {
 			var self = this
 			_iterateControls(this, function(r, col){
