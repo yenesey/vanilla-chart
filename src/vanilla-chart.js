@@ -386,11 +386,11 @@ function VanillaChart(containerId, data) {
 		var i = a, label, w, dataX = _getColumn(data, 'x')
 		while (i < b) {
 			var x = (i * scaleView - left) * scaleX
-			//if (x > 20) {
+			if (x > symbolSize) {
 				label = _getDateText(dataX[i+1], 2)
 				w = ctx.measureText(label).width
 				ctx.fillText(label, _round(x - w / 2),	Y0 + symbolSize + 6)
-			//}
+			}
 			i += Math.pow(2, dense)
 		}
 		//-------------------------Selection
