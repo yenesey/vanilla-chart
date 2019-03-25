@@ -12,7 +12,7 @@
 				 margin:0;
 			}	
 			header{
-				background-color: #aaaafa;
+				background-color: #b9dafe;
 				display: flex;
 				width: 100%;
 			}
@@ -106,7 +106,7 @@
 				day = !day
 				sw.innerText = 'Switch ' + ['day', 'night'][Number(day)] + ' mode'
 				document.querySelector('body').style.backgroundColor = day?"#fff":"#333"
-				document.querySelector('header').style.backgroundColor = day?"#aaaafa":"#636473"
+				document.querySelector('header').style.backgroundColor = day?"#b9dafe":"#636473"
 				el = document.querySelectorAll('span,a')
 				for (var i = 0; i < el.length; i++) el[i].style.color = day?"#333":"#fff"
 				//chart colors application is simple:	
