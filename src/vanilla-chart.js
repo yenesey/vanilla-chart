@@ -6,7 +6,6 @@ var
 	_min = Math.min, 
 	_max = Math.max,
 	_round = Math.round,
-	_abs = Math.abs,
 	_log = function(x,y) {
 		 return Math.log(y) / Math.log(x)
 	}
@@ -380,10 +379,11 @@ function VanillaChart(containerId, data) {
 		//-------------------------X - labels
 		var labelSize = _round(symbolSize * 7)
 		//have run out of time to polish label animation
-		var dense = _max(0, _log(2, labelSize/ (scaleView * scaleX)))	// (scaleView * scaleX) - in fact is a distance between 2 near points
-		var i = 1, label, w, dataX = _getColumn(data, 'x');
+		var dense = _round(_max(0, _log(2, labelSize/ (scaleView * scaleX))))	// (scaleView * scaleX) - in fact is a distance between 2 near points
 //		var alpha = ((dense - Math.floor(dense)))
-		dense = _round(dense)
+		var i = 1, label, w, dataX = _getColumn(data, 'x');
+
+
 		while (i < b) {
 			var x = (i * scaleView - left) * scaleX
 			if (x > symbolSize) {
