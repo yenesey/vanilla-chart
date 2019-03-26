@@ -25,7 +25,7 @@ var defaults = {
 		background: '#fff',
 		minimap: '#f4f8ff',
 		minimapFrame: '#c8dde8',
-		minimapDrag: 'rgba(200, 190, 190, 0.2)',
+		minimapDrag: 'rgba(170, 170, 140, 0.3)',
 		label: '#666',
 		labelBackground: 'rgba(240, 240, 250, 0.82)'
 	}
@@ -380,6 +380,7 @@ function VanillaChart(containerId, data) {
 		ctx.stroke()
 
 		//-------------------------X - labels
+		// note: this works fine only if intervals are regular
 		var labelSize = _round(symbolSize * 7)
 		var dense = _round(_max(0, _log(2, labelSize / (scaleView * scaleX))))	// (scaleView * scaleX) - in fact is a distance between 2 near points
 		//run out of time to polish label animation
@@ -459,7 +460,10 @@ function VanillaChart(containerId, data) {
 		_iterateControls(self, function(r, col){
 			ctx.beginPath()
 			ctx.fillStyle = self.options.colors.minimap
+			ctx.strokeStyle = 'grey'
+			ctx.lineWidth = 0.3
 			_drawRoundedRect(ctx, r.x, r.y, r.w, r.h, r.h/2).fill()
+			ctx.stroke()
 			ctx.textBaseline = 'middle'
 			if (self.names[col].visible) {
 				ctx.beginPath()
@@ -474,6 +478,7 @@ function VanillaChart(containerId, data) {
 				ctx.font = _fontShift(self.font, 4)
 			} else {
 				ctx.beginPath()
+				ctx.lineWidth = 1
 				ctx.strokeStyle = data.colors[col]
 				ctx.arc(r.x + r.h/2, r.y+r.h/2, r.h/3, 0, 2*Math.PI, false)
 				ctx.stroke()
@@ -505,7 +510,7 @@ function VanillaChart(containerId, data) {
 		var r = this._transitions.pointer.pos
 		if (r > 0) {
 			ctx.beginPath()
-			ctx.fillStyle = 'rgba(200, 190, 190, 0.2)'
+			ctx.fillStyle = this.options.colors.minimapDrag
 			ctx.arc(pointerX, pointerY, r,   0, 2*Math.PI, false)
 			if (r > 12)	ctx.arc(pointerX, pointerY, r-12,   0, 2*Math.PI, true)
 			ctx.fill()
