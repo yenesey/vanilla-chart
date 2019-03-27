@@ -25,7 +25,7 @@ var defaults = {
 		background: '#fff',
 		minimap: '#f4f8ff',
 		minimapFrame: '#c8dde8',
-		minimapDrag: 'rgba(170, 170, 140, 0.3)',
+		minimapDrag: 'rgba(175, 175, 210, 0.2)',
 		label: '#666',
 		labelBackground: 'rgba(240, 240, 250, 0.82)'
 	}
