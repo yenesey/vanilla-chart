@@ -6,6 +6,7 @@ var
 	_min = Math.min, 
 	_max = Math.max,
 	_round = Math.round,
+	_floor = Math.floor,
 	_log = function(x,y) {
 		 return Math.log(y) / Math.log(x)
 	}
@@ -53,6 +54,7 @@ function VanillaChart(containerId, data) {
 */
 	this.data = null
 	this.names = {}
+	this.tree = [] // segment tree
 	this.options = defaults
 	this.container = document.getElementById(containerId)
 	if (!this.container) throw new Error('chart container not found!')
@@ -117,15 +119,42 @@ function VanillaChart(containerId, data) {
 		doneBnd: null
 	}
 	
+	function _buildTree(self) { // build segment tree (with max)
+		var n = (1 << (Math.log2(self.dataLength - 1) + 1))
+		var T = new Array(2*n)
+
+		for (var i = 0; i <= self.dataLength; i++) {
+			var max = -1
+			for (var name in self.names) if (self.names[name].visible) {
+				var column = _getColumn(self.data, name)
+				max = _max(max, column[i+1])
+			}
+			T[i] = max
+		}
+
+		for (i = self.dataLength; i < 2*n; i++) T[i] = -1
+		for (i = n; i < 2*n; i++) T[i] = T[i - n]
+		for (i = n - 1; i > 0; i--)	T[i] = _max(T[2 * i], T[2 * i + 1])
+		return T
+	}
+	
+	function _treeMax(T, l, r) {
+		var result = -1
+		var n = T.length / 2
+		l += n - 1, r += n - 1
+		while (l <= r) {
+			if (l & 1) result = _max(result, T[l])
+			if (!(r & 1)) result = _max(result, T[r])
+			l = _floor((l + 1) / 2)
+			r = _floor((r - 1) / 2)
+		}		
+		return result
+	}
+
 	function _getMaxY (self, useMinimap) {
-		var max = 0
 		var a = useMinimap ? self.minimap.a : 0
 		var b = useMinimap ? self.minimap.b : self.dataLength - 1
-		for (var name in self.names) if (self.names[name].visible) {
-			var column = _getColumn(self.data, name)
-			for (var i = a; i <= b; i++)  max = _max(max, column[i+1])
-		}
-		return max
+		return _treeMax(self.tree, a+1, b+1)
 	}
 
 	function _getMinimapRect(self) {
@@ -588,11 +617,13 @@ function VanillaChart(containerId, data) {
 				width: w - this.options.padding
 			}
 		}
+		this.tree = _buildTree(this)
 		this.initTransition('graph', 'current', _getMaxY(this, true) )
 	}
 
 	this.setVisibility = function(col, vis) {
 		this.names[col].visible = (typeof vis === 'undefined')? !this.names[col].visible : vis
+		this.tree = _buildTree(this)
 		this.initTransition('graph', 'current', _getMaxY(this, true) )
 	}
 
