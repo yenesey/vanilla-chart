@@ -120,7 +120,7 @@ function VanillaChart(containerId, data) {
 	}
 	
 	function _buildTree(self) { // build segment tree (with max)
-		var n = (1 << (Math.log2(self.dataLength - 1) + 1))
+		var n = (1 << (_log(2, self.dataLength - 1) + 1))
 		var T = new Array(2*n)
 
 		for (var i = 0; i <= self.dataLength; i++) {
