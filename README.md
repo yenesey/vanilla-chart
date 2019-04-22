@@ -12,4 +12,4 @@ This is made for Telegram coding competition for JS dev's
 
 # The demo lives here
 
-	https://yenesey.github.io/vanilla-chart
+https://yenesey.github.io/vanilla-chart
