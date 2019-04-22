@@ -4,7 +4,7 @@ This is made for Telegram coding competition for JS dev's
     
 # Key features
 
-* Pure ES with no dependencies
+* Pure ES5 with no dependencies
 * Small size (only 4k of min.gz)
 * Cross-browser
 * Chart size is flexible by design
