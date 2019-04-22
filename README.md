@@ -1,6 +1,11 @@
 # vanilla-chart (Telegram march 2019 coding contest)
 
 This is made for Telegram coding competition for JS dev's
+
+## The demo lives here
+
+https://yenesey.github.io/vanilla-chart
+
     
 # Key features
 
@@ -10,6 +15,3 @@ This is made for Telegram coding competition for JS dev's
 * Chart size is flexible by design
 * Module can be used in any project
 
-# The demo lives here
-
-https://yenesey.github.io/vanilla-chart
